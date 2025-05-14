@@ -3,5 +3,8 @@ package com.team4.shoestore.repository;
 import com.team4.shoestore.model.Brand;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface BrandRepository extends JpaRepository<Brand, Integer> {
+    List<Brand> findByNameContainingIgnoreCase(String name);
 }
