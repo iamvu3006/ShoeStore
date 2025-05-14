@@ -13,30 +13,28 @@ public class CustomerService {
     @Autowired
     private CustomerRepository customerRepository;
 
-    public Customer createCustomer(Customer customer) {
-        return customerRepository.save(customer);
-    }
-
-    public Customer getCustomerById(Integer id) {
-        return customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Customer not found with ID: " + id));
-    }
-
     public List<Customer> getAllCustomers() {
         return customerRepository.findAll();
     }
 
-    public Customer updateCustomer(Integer id, Customer customer) {
-        Customer existing = getCustomerById(id);
-        existing.setName(customer.getName());
-        existing.setPhone(customer.getPhone());
-        existing.setJoinDate(customer.getJoinDate());
-        existing.setUser(customer.getUser());
-        return customerRepository.save(existing);
+    public Customer getCustomerById(Integer id) {
+        return customerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng có ID: " + id));
+    }
+
+    public Customer saveCustomer(Customer customer) {
+        return customerRepository.save(customer);
     }
 
     public void deleteCustomer(Integer id) {
-        Customer existing = getCustomerById(id);
-        customerRepository.delete(existing);
+        customerRepository.deleteById(id);
+    }
+
+    public List<Customer> findCustomersByName(String name) {
+        return customerRepository.findByNameContainingIgnoreCase(name);
+    }
+
+    public List<Customer> findCustomersByPhone(String phone) {
+        return customerRepository.findByPhoneContaining(phone);
     }
 }

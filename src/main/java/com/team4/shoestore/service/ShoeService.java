@@ -13,33 +13,32 @@ public class ShoeService {
     @Autowired
     private ShoeRepository shoeRepository;
 
-    public Shoe createShoe(Shoe shoe) {
-        return shoeRepository.save(shoe);
-    }
-
-    public Shoe getShoeById(Integer id) {
-        return shoeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Shoe not found with ID: " + id));
-    }
-
     public List<Shoe> getAllShoes() {
         return shoeRepository.findAll();
     }
 
-    public Shoe updateShoe(Integer id, Shoe shoe) {
-        Shoe existing = getShoeById(id);
-        existing.setName(shoe.getName());
-        existing.setDescription(shoe.getDescription());
-        existing.setPrice(shoe.getPrice());
-        existing.setCategory(shoe.getCategory());
-        existing.setImageUrl(shoe.getImageUrl());
-        existing.setStatus(shoe.isStatus());
-        existing.setBrand(shoe.getBrand());
-        return shoeRepository.save(existing);
+    public Shoe getShoeById(Integer id) {
+        return shoeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giày có ID: " + id));
+    }
+
+    public Shoe saveShoe(Shoe shoe) {
+        return shoeRepository.save(shoe);
     }
 
     public void deleteShoe(Integer id) {
-        Shoe existing = getShoeById(id);
-        shoeRepository.delete(existing);
+        shoeRepository.deleteById(id);
+    }
+
+    public List<Shoe> findShoesByName(String name) {
+        return shoeRepository.findByNameContainingIgnoreCase(name);
+    }
+
+    public List<Shoe> findShoesByCategory(String category) {
+        return shoeRepository.findByCategoryContainingIgnoreCase(category);
+    }
+
+    public List<Shoe> findShoesByBrandId(Integer brandId) {
+        return shoeRepository.findByBrand_BrandId(brandId);
     }
 }

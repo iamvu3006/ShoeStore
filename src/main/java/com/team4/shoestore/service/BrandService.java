@@ -13,28 +13,24 @@ public class BrandService {
     @Autowired
     private BrandRepository brandRepository;
 
-    public Brand createBrand(Brand brand) {
-        return brandRepository.save(brand);
-    }
-
-    public Brand getBrandById(Integer id) {
-        return brandRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Brand not found with ID: " + id));
-    }
-
     public List<Brand> getAllBrands() {
         return brandRepository.findAll();
     }
 
-    public Brand updateBrand(Integer id, Brand brand) {
-        Brand existing = getBrandById(id);
-        existing.setName(brand.getName());
-        existing.setCountry(brand.getCountry());
-        return brandRepository.save(existing);
+    public Brand getBrandById(Integer id) {
+        return brandRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thương hiệu có ID: " + id));
+    }
+
+    public Brand saveBrand(Brand brand) {
+        return brandRepository.save(brand);
     }
 
     public void deleteBrand(Integer id) {
-        Brand existing = getBrandById(id);
-        brandRepository.delete(existing);
+        brandRepository.deleteById(id);
+    }
+
+    public List<Brand> findBrandsByName(String name) {
+        return brandRepository.findByNameContainingIgnoreCase(name);
     }
 }
