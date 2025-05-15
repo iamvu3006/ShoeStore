@@ -328,12 +328,12 @@ public class ShoeDetailForm extends JDialog {
     }
     
     private void initEvent() {
-        btnAdd.addActionListener(_ -> {
+        btnAdd.addActionListener(ee -> {
             AddEditSizeColorForm form = new AddEditSizeColorForm(this, true);
             form.setVisible(true);
         });
         
-        btnEdit.addActionListener(_ -> {
+        btnEdit.addActionListener(ee -> {
             int selectedRow = tblSizes.getSelectedRow();
             if (selectedRow == -1) {
                 JOptionPane.showMessageDialog(this,
@@ -351,7 +351,7 @@ public class ShoeDetailForm extends JDialog {
             form.setVisible(true);
         });
         
-        btnDelete.addActionListener(_ -> {
+        btnDelete.addActionListener(ee -> {
             int selectedRow = tblSizes.getSelectedRow();
             if (selectedRow == -1) {
                 JOptionPane.showMessageDialog(this,
@@ -371,9 +371,9 @@ public class ShoeDetailForm extends JDialog {
             }
         });
         
-        btnClose.addActionListener(_ -> dispose());
+        btnClose.addActionListener(ee -> dispose());
         
-        btnUploadImage.addActionListener(_ -> {
+        btnUploadImage.addActionListener(ee -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
                 public boolean accept(java.io.File f) {

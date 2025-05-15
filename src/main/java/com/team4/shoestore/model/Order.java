@@ -24,7 +24,7 @@ public class Order {
     private PaymentMethod paymentMethod;
 
     public enum PaymentMethod {
-        CASH, CARD, ONLINE
+        cash, card
     }
 
     @OneToMany(mappedBy = "order")

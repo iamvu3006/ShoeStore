@@ -1,12 +1,18 @@
 package com.team4.shoestore.ui;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
+import java.util.List;
+import com.team4.shoestore.model.Customer;
 
+import com.team4.shoestore.service.CustomerService;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
+
+@Component
 public class FormCustomers extends JPanel {
     // Components
     private JPanel headerPanel;
@@ -22,10 +28,57 @@ public class FormCustomers extends JPanel {
     private JComboBox<String> cboFilterType;
     private JComboBox<String> cboDateFilter;
     
+
+    @Autowired
+    private CustomerService customerService;
+
     public FormCustomers() {
         initComponents();
         initEvent();
     }
+    
+
+    @PostConstruct
+    public void init(){
+        loadCustomersFromDatabase();
+    }
+
+    public void loadCustomersFromDatabase(){
+        try {
+            System.out.println("Starting to load customers from database...");
+            
+            // Clear existing data
+            tableModel.setRowCount(0);
+            System.out.println("Cleared existing table data");
+            
+            // Get customers from database
+            List<Customer> customers = customerService.getAllCustomers();
+            System.out.println("Retrieved " + (customers != null ? customers.size() : 0) + " customers from database");
+            
+            // Add users to table
+            if (customers != null) {
+                for (Customer customer : customers) {
+                    System.out.println("Adding user to table: " + customer.getName());
+                    tableModel.addRow(new Object[]{
+                        customer.getCustomerId(),
+                        customer.getName(),
+                        customer.getPhone(),
+                        customer.getJoinDate()
+                    });
+                }
+            }
+            System.out.println("Finished loading customers");
+        } catch (Exception e) {
+            System.err.println("Error loading customers: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Error loading customers: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
     
     private void initComponents() {
         setLayout(new BorderLayout());
@@ -85,7 +138,7 @@ public class FormCustomers extends JPanel {
         // Customize combobox appearance
         cboFilterType.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            public JLabel getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setBackground(isSelected ? new Color(70, 70, 70) : new Color(40, 40, 40));
                 setForeground(Color.WHITE);
@@ -110,7 +163,7 @@ public class FormCustomers extends JPanel {
         // Customize date filter combobox appearance
         cboDateFilter.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            public JLabel getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setBackground(isSelected ? new Color(70, 70, 70) : new Color(40, 40, 40));
                 setForeground(Color.WHITE);
@@ -189,8 +242,6 @@ public class FormCustomers extends JPanel {
             }
         });
         
-        // Add sample data
-        addSampleData();
         
         JScrollPane scrollPane = new JScrollPane(customerTable);
         scrollPane.setBackground(new Color(40, 40, 40));
@@ -239,7 +290,7 @@ public class FormCustomers extends JPanel {
         button.setBackground(new Color(64, 64, 64));
         button.setBorderPainted(false);
         button.setFocusPainted(false);
-        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setAlignmentX(0.5f);
         
         // Add hover effect
         button.addMouseListener(new MouseAdapter() {
@@ -252,22 +303,6 @@ public class FormCustomers extends JPanel {
         });
         
         return button;
-    }
-    
-    private void addSampleData() {
-        // Add some sample data to the table
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-        String currentDate = dateFormat.format(new Date());
-        
-        Object[][] data = {
-            {"1", "Nguyễn Văn A", "0123456789", currentDate},
-            {"2", "Trần Thị B", "0987654321", currentDate},
-            {"3", "Lê Văn C", "0369852147", currentDate}
-        };
-        
-        for (Object[] row : data) {
-            tableModel.addRow(row);
-        }
     }
     
     private void initEvent() {

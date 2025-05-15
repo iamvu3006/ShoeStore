@@ -1,7 +1,8 @@
 package com.team4.shoestore.ui;
 
-import com.team4.shoestore.controller.UserController;
+import com.team4.shoestore.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import javax.swing.*;
@@ -9,10 +10,13 @@ import java.awt.*;
 import java.awt.event.*;
 
 @Component
-public class FormLogin extends JFrame {
+public class FormLogin extends JPanel {
     // Thêm controller
     @Autowired
-    private UserController userController;
+    private UserService userService;
+    
+    @Autowired
+    private ApplicationContext applicationContext;
     
     // Các thành phần của giao diện
     private JPanel pnlLeft;        // Panel bên trái chứa poster
@@ -29,12 +33,7 @@ public class FormLogin extends JFrame {
     }
     
     public void initComponents() {
-        
-        //Set form
-        setTitle("Đăng Nhập");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1000, 600);  
-        setLocationRelativeTo(null);
+        this.setLayout(new BorderLayout());
         
         // tao mainPanel
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -49,7 +48,7 @@ public class FormLogin extends JFrame {
         lblPoster.setVerticalAlignment(JLabel.CENTER);
         
         // xu ly anh trong panel left 
-        ImageIcon imageIcon = new ImageIcon("View/images/mainposter.jpg");
+        ImageIcon imageIcon = new ImageIcon(getClass().getResource("/images/mainposter.jpg"));
         Image image = imageIcon.getImage();
         Image resizeImage = image.getScaledInstance(450, 600, Image.SCALE_SMOOTH);
         lblPoster.setIcon(new ImageIcon(resizeImage));
@@ -159,8 +158,8 @@ public class FormLogin extends JFrame {
         mainPanel.add(pnlLeft, BorderLayout.WEST);
         mainPanel.add(pnlRight, BorderLayout.CENTER);
         
-        // Thêm mainPanel vào frame
-        add(mainPanel);
+        // Thêm mainPanel vào JPanel
+        this.add(mainPanel, BorderLayout.CENTER);
     }
     
     public void initEvent() {
@@ -168,23 +167,40 @@ public class FormLogin extends JFrame {
         btnLogin.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String username = txtUsername.getText();
-                String password = new String(txtPassword.getPassword());
-                
-                if (userController.authenticate(username, password)) {
-                    // Đăng nhập thành công
-                    JOptionPane.showMessageDialog(FormLogin.this, 
-                        "Đăng nhập thành công!", 
-                        "Thông báo", 
-                        JOptionPane.INFORMATION_MESSAGE);
+                try {
+                    String username = txtUsername.getText().trim();
+                    String password = new String(txtPassword.getPassword());
                     
-                    // Mở form chính
-                    openMainForm();
-                } else {
-                    // Đăng nhập thất bại
-                    JOptionPane.showMessageDialog(FormLogin.this, 
-                        "Tên đăng nhập hoặc mật khẩu không chính xác!", 
-                        "Lỗi đăng nhập", 
+                    // Kiểm tra dữ liệu đầu vào
+                    if (username.isEmpty() || password.isEmpty()) {
+                        JOptionPane.showMessageDialog(FormLogin.this,
+                            "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!",
+                            "Lỗi đăng nhập",
+                            JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    
+                    // Xóa dữ liệu nhập
+                    txtUsername.setText(username);
+                    txtPassword.setText(password);
+                    
+                    // Thực hiện đăng nhập
+                    if (userService.authenticate(username, password)) {
+                        JOptionPane.showMessageDialog(FormLogin.this,
+                            "Đăng nhập thành công!",
+                            "Thông báo",
+                            JOptionPane.INFORMATION_MESSAGE);
+                        openMainForm();
+                    } else {
+                        JOptionPane.showMessageDialog(FormLogin.this,
+                            "Tên đăng nhập hoặc mật khẩu không chính xác!",
+                            "Lỗi đăng nhập",
+                            JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(FormLogin.this,
+                        "Có lỗi xảy ra: " + ex.getMessage(),
+                        "Lỗi hệ thống",
                         JOptionPane.ERROR_MESSAGE);
                 }
             }
@@ -197,27 +213,34 @@ public class FormLogin extends JFrame {
                 System.exit(0);
             }
         });
+        
+        // Thêm sự kiện Enter cho các trường nhập liệu
+        txtUsername.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    txtPassword.requestFocus();
+                }
+            }
+        });
+        
+        txtPassword.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    btnLogin.doClick();
+                }
+            }
+        });
     }
 
     private void openMainForm() {
         // Đóng form login
         setVisible(false);
-        dispose();
+        SwingUtilities.getWindowAncestor(this).dispose();
         
-        // Mở DashboardForm
-        SwingUtilities.invokeLater(() -> {
-            DashboardForm dashboard = SpringContext.getBean(DashboardForm.class);
-            dashboard.setVisible(true);
-        });
-    }
-
-    public static void main(String args[]) {
-        // Chạy ứng dụng trong Event Dispatch Thread
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new FormLogin().setVisible(true);
-            }
-        });
+        // Lấy FormHome từ Spring context
+        FormHome formHome = applicationContext.getBean(FormHome.class);
+        formHome.setVisible(true);
     }
 }

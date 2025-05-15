@@ -1,11 +1,17 @@
 package com.team4.shoestore.ui;
+import com.team4.shoestore.service.BrandService;
+import com.team4.shoestore.model.Brand;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
+import java.util.List;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.*;
 
-
+@Component
 public class FormBrands extends JPanel {
     // Components
     private JPanel headerPanel;
@@ -32,11 +38,19 @@ public class FormBrands extends JPanel {
     private static final Color TABLE_BORDER_COLOR = new Color(50, 50, 50);
     private static final Color TABLE_HEADER_TEXT_COLOR = new Color(255, 215, 0);
     
+    @Autowired
+    private BrandService brandService;
+
     public FormBrands() {
         initComponents();
         initEvent();
     }
     
+    @PostConstruct
+    public void init(){
+        LoadAllBrands();
+    }
+
     private void initComponents() {
         setLayout(new BorderLayout());
         setBackground(BACKGROUND_COLOR);
@@ -56,6 +70,41 @@ public class FormBrands extends JPanel {
         add(buttonPanel, BorderLayout.EAST);
     }
     
+
+    public void LoadAllBrands() {
+        try {
+            System.out.println("Starting to load Brands from database...");
+            
+            // Clear existing data
+            tableModel.setRowCount(0);
+            System.out.println("Cleared existing table data");
+            
+            // Get users from database
+            List<Brand> brands = brandService.getAllBrands();
+            System.out.println("Retrieved " + (brands != null ? brands.size() : 0) + " brands from database");
+            
+            // Add users to table
+            if (brands != null) {
+                for (Brand brand : brands) {
+                    System.out.println("Adding user to table: " + brand.getName());
+                    tableModel.addRow(new Object[]{
+                        brand.getBrandId(),
+                        brand.getName(),
+                        brand.getCountry()
+                    });
+                }
+            }
+            System.out.println("Finished loading brand");
+        } catch (Exception e) {
+            System.err.println("Error loading brands: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Error loading brands: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void initHeader() {
         headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(BACKGROUND_COLOR);
@@ -95,7 +144,7 @@ public class FormBrands extends JPanel {
         // Customize combobox appearance
         cboFilterType.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            public JLabel getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setBackground(isSelected ? TABLE_SELECTION_COLOR : PANEL_COLOR);
                 setForeground(TEXT_COLOR);
@@ -184,8 +233,7 @@ public class FormBrands extends JPanel {
             brandTable.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
         }
         
-        // Add sample data
-        addSampleData();
+
         
         JScrollPane scrollPane = new JScrollPane(brandTable);
         scrollPane.setBackground(TABLE_ROW_COLOR);
@@ -218,7 +266,7 @@ public class FormBrands extends JPanel {
         buttonPanel.setBackground(BACKGROUND_COLOR);
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 20));
         
-        btnEdit = createButton("✏️ Sửa");
+        btnEdit = createButton("Sửa");
                 btnDelete = createButton("Xóa");
         
         // Set button sizes
@@ -239,7 +287,7 @@ public class FormBrands extends JPanel {
         button.setBackground(BUTTON_COLOR);
         button.setBorderPainted(false);
         button.setFocusPainted(false);
-        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setAlignmentX(0.5f);
         
         // Add hover effect
         button.addMouseListener(new MouseAdapter() {
@@ -254,17 +302,6 @@ public class FormBrands extends JPanel {
         return button;
     }
     
-    private void addSampleData() {
-        Object[][] data = {
-            {"1", "Nike", "Mỹ"},
-            {"2", "Adidas", "Đức"},
-            {"3", "Puma", "Đức"}
-        };
-        
-        for (Object[] row : data) {
-            tableModel.addRow(row);
-        }
-    }
     
     private void initEvent() {
 

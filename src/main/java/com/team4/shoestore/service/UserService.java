@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -14,6 +15,7 @@ public class UserService {
     private UserRepository userRepository;
 
     public List<User> getAllUsers() {
+        
         return userRepository.findAll();
     }
     
@@ -36,4 +38,40 @@ public class UserService {
     public void deleteUser(Integer id) {
         userRepository.deleteById(id);
     }
+
+    public List<User> findUsersByUsernameContainingIgnoreCase(String s) {
+        String search = s.toLowerCase();
+        return userRepository.findAll()
+            .stream()
+            .filter(user -> user.getUsername().toLowerCase().contains(search))
+            .collect(Collectors.toList());
+    }
+
+    public void AddNewUser(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
+        }
+        userRepository.save(user);
+    }
+
+    public void DeleteUser(Integer id) {
+        if (id == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found with ID: " + id);
+        }
+        userRepository.deleteById(id);
+    }
+
+    public void UpdateUser(User user) {
+        if (user == null || user.getUserId() <= 0) {
+            throw new IllegalArgumentException("User cannot be null and User ID must be greater than 0");
+        }
+        if (!userRepository.existsById(user.getUserId())) {
+            throw new RuntimeException("User not found with ID: " + user.getUserId());
+        }
+        userRepository.save(user);
+    }
+
 }
