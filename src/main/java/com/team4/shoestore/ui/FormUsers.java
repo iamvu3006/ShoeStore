@@ -1,10 +1,18 @@
 package com.team4.shoestore.ui;
+import com.team4.shoestore.service.UserService;
+import com.team4.shoestore.model.User;
+import com.team4.shoestore.ui.childform.AddEditUserForm;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
+import java.util.List;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.*;
 
+@Component
 public class FormUsers extends JPanel {
     // Components
     private JPanel headerPanel;
@@ -18,11 +26,59 @@ public class FormUsers extends JPanel {
     private JButton btnEdit;
     private JButton btnDelete;
     
+
+    @Autowired
+    private UserService userService;
+
     public FormUsers() {
         initComponents();
         initEvent();
     }
-    
+
+    @PostConstruct
+    public void init() {
+        loadUsersFromDatabase();
+    }
+
+    private void loadUsersFromDatabase() {
+        try {
+            System.out.println("Starting to load users from database...");
+            
+            // Clear existing data
+            tableModel.setRowCount(0);
+            System.out.println("Cleared existing table data");
+            
+            // Get users from database
+            List<User> users = userService.getAllUsers();
+            System.out.println("Retrieved " + (users != null ? users.size() : 0) + " users from database");
+            
+            // Add users to table
+            if (users != null) {
+                for (User user : users) {
+                    System.out.println("Adding user to table: " + user.getUsername());
+                    tableModel.addRow(new Object[]{
+                        user.getUserId(),
+                        user.getUsername(),
+                        user.getPassword(),
+                        user.getRole()
+                    });
+                }
+            }
+            System.out.println("Finished loading users");
+        } catch (Exception e) {
+            System.err.println("Error loading users: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Error loading users: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
+
+
+
     private void initComponents() {
         setLayout(new BorderLayout());
         setBackground(new Color(30, 30, 30)); // Dark background
@@ -131,9 +187,6 @@ public class FormUsers extends JPanel {
             }
         });
         
-        // Add sample data
-        addSampleData();
-        
         JScrollPane scrollPane = new JScrollPane(userTable);
         scrollPane.setBackground(new Color(40, 40, 40)); // Set scroll pane background
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
@@ -181,7 +234,6 @@ public class FormUsers extends JPanel {
         button.setBackground(new Color(64, 64, 64));
         button.setBorderPainted(false);
         button.setFocusPainted(false);
-        button.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         // Add hover effect
         button.addMouseListener(new MouseAdapter() {
@@ -196,20 +248,72 @@ public class FormUsers extends JPanel {
         return button;
     }
     
-    private void addSampleData() {
-        // Add some sample data to the table
-        Object[][] data = {
-            {"1", "admin", "admin@", "Admin"},
-            {"2", "user1", "user1@", "User"},
-            {"3", "user2", "user2@", "User"}
-        };
-        
-        for (Object[] row : data) {
-            tableModel.addRow(row);
-        }
-    }
     
     private void initEvent() {
         // Add event listeners here
+        btnSearch.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String search = txtSearch.getText();
+                List<User> users = userService.findUsersByUsernameContainingIgnoreCase(search);
+                tableModel.setRowCount(0);
+                for (User user : users) {
+                    tableModel.addRow(new Object[]{
+                        user.getUserId(),
+                        user.getUsername(),
+                        user.getPassword(),
+                        user.getRole()
+                    });
+                }
+            }
+        });
+
+        btnAdd.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                FormUsers.this.setVisible(false);
+                SwingUtilities.getWindowAncestor(FormUsers.this).dispose();
+                AddEditUserForm addEditUserForm = new AddEditUserForm((Frame)SwingUtilities.getWindowAncestor(FormUsers.this), true, -1);
+                addEditUserForm.setVisible(true);
+            }
+        });
+
+        btnEdit.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = userTable.getSelectedRow();
+                if (selectedRow == -1) {
+                    JOptionPane.showMessageDialog(FormUsers.this, 
+                        "Please select a user to edit", 
+                        "No Selection", 
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                int userId = (int) userTable.getValueAt(selectedRow, 0);
+                FormUsers.this.setVisible(false);
+                SwingUtilities.getWindowAncestor(FormUsers.this).dispose();
+                AddEditUserForm editUserForm = new AddEditUserForm((Frame)SwingUtilities.getWindowAncestor(FormUsers.this), false, userId);
+                editUserForm.setVisible(true);
+            }
+        });
+
+        btnDelete.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if(userTable.getSelectedRow() == -1){
+                    JOptionPane.showMessageDialog(FormUsers.this, 
+                        "Please select a user to delete", 
+                        "No Selection", 
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                int userId = (int) userTable.getValueAt(userTable.getSelectedRow(), 0);
+                userService.deleteUser(userId);
+                loadUsersFromDatabase();
+            }
+        });
     }
+
+  
 } 

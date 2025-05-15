@@ -3,11 +3,17 @@ package com.team4.shoestore.ui;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-
+import org.springframework.context.ApplicationContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+@Component
 public class FormHome extends JFrame {
     // Components
     private JPanel sidebarPanel;
     private JPanel panelLoader; // Panel to load other forms
+    
+    @Autowired
+    private ApplicationContext applicationContext;
     
     public FormHome() {
         initComponents();
@@ -40,6 +46,9 @@ public class FormHome extends JFrame {
     }
     
     private void initSidebar() {
+
+
+
         sidebarPanel = new JPanel();
         sidebarPanel.setPreferredSize(new Dimension(200, 0));
         sidebarPanel.setBackground(new Color(45, 45, 45)); // Darker sidebar
@@ -56,7 +65,7 @@ public class FormHome extends JFrame {
         // User icon
         JLabel userIcon = new JLabel();
         try {
-            ImageIcon icon = new ImageIcon("View/images/icon/user.png");
+            ImageIcon icon = new ImageIcon(getClass().getResource("/images/icon/user.png"));
             Image image = icon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
             userIcon.setIcon(new ImageIcon(image));
         } catch (Exception e) {
@@ -64,13 +73,13 @@ public class FormHome extends JFrame {
             userIcon.setFont(new Font("Arial", Font.PLAIN, 40));
         }
         userIcon.setForeground(Color.WHITE);
-        userIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
+        userIcon.setAlignmentX(0.5f);
         
         // Username label
         JLabel usernameLabel = new JLabel("Username");
         usernameLabel.setFont(new Font("Arial", Font.BOLD, 16));
         usernameLabel.setForeground(Color.WHITE);
-        usernameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        usernameLabel.setAlignmentX(0.5f);
         
         // Add components to user panel
         userPanel.add(userIcon);
@@ -119,7 +128,7 @@ public class FormHome extends JFrame {
         button.setBackground(new Color(60, 60, 60)); // Dark button background
         button.setBorderPainted(false);
         button.setFocusPainted(false);
-        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setAlignmentX(0.5f);
         button.setMaximumSize(new Dimension(180, 40));
         
         // Add hover effect
@@ -142,8 +151,8 @@ public class FormHome extends JFrame {
     
     private void initEvent() {
         // Add event listeners for navigation buttons
-        Component[] components = sidebarPanel.getComponents();
-        for (Component component : components) {
+        java.awt.Component[] components = sidebarPanel.getComponents();
+        for (java.awt.Component component : components) {
             if (component instanceof JButton) {
                 JButton button = (JButton) component;
                 button.addActionListener(new ActionListener() {
@@ -152,28 +161,28 @@ public class FormHome extends JFrame {
                         String buttonText = button.getText();
                         switch (buttonText) {
                             case "Menu":
-                                loadForm(new FormMenu());
+                                loadForm(applicationContext.getBean(FormMenu.class));
                                 break;
                             case "Invoice":
-                                loadForm(new FormInvoices());
+                                loadForm(applicationContext.getBean(FormInvoices.class));
                                 break;
                             case "Shoes":
-                                loadForm(new FormShoes());
+                                loadForm(applicationContext.getBean(FormShoes.class));
                                 break;
                             case "Brand":
-                                loadForm(new FormBrands());
+                                loadForm(applicationContext.getBean(FormBrands.class));
                                 break;
                             case "Customers":
-                                loadForm(new FormCustomers());
+                                loadForm(applicationContext.getBean(FormCustomers.class));
                                 break;
                             case "Users":
-                                loadForm(new FormUsers());
+                                loadForm(applicationContext.getBean(FormUsers.class));
                                 break;
                             case "Dashboard":
-                                loadForm(new DashboardForm());
+                                loadForm(applicationContext.getBean(DashboardForm.class));
                                 break;
                             case "Logout":
-                                // Handle logout
+                                System.exit(0);
                                 break;
                         }
                     }
@@ -188,10 +197,5 @@ public class FormHome extends JFrame {
         panelLoader.revalidate();
         panelLoader.repaint();
     }
-    
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new FormHome().setVisible(true);
-        });
-    }
+
 }

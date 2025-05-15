@@ -1,12 +1,16 @@
 package com.team4.shoestore.ui;
-
+import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.team4.shoestore.service.OrderService;
+import com.team4.shoestore.model.Order;
+import jakarta.annotation.PostConstruct;
+import java.util.List;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
+@Component
 public class FormInvoices extends JPanel {
     // Components
     private JPanel headerPanel;
@@ -20,11 +24,58 @@ public class FormInvoices extends JPanel {
     private JButton btnConfirmPayment;
     private JButton btnViewDetails;
     
+    @Autowired
+    private OrderService orderService;
+
     public FormInvoices() {
         initComponents();
         initEvent();
     }
-    
+    @PostConstruct
+    public void init(){
+        LoadAllOrders();
+    }
+
+
+
+    public void LoadAllOrders() {
+        try {
+            System.out.println("Starting to load orders from database...");
+            
+            // Clear existing data
+            tableModel.setRowCount(0);
+            System.out.println("Cleared existing table data");
+            
+            // Get orders from database
+            List<Order> orders = orderService.getAllOrders();
+            System.out.println("Retrieved " + (orders != null ? orders.size() : 0) + " orders from database");
+            
+            // Add orders to table
+            if (orders != null) {
+                for (Order order : orders) {
+                    System.out.println("Adding order to table: " + order.getOrderId());
+                    tableModel.addRow(new Object[]{
+                        order.getOrderId(),
+                        order.getCustomer().getCustomerId(),
+                        order.getOrderDate(),
+                        order.getCustomer().getName(),
+                        order.getTotalAmount(),
+                        order.getPaymentMethod(),
+                        order.isPaymentStatus()? "Đã thanh toán" : "Chưa thanh toán"
+                    });
+                }
+            }
+            System.out.println("Finished loading orders");
+        } catch (Exception e) {
+            System.err.println("Error loading orders: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Error loading orders: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void initComponents() {
         setLayout(new BorderLayout());
         setBackground(new Color(30, 30, 30));
@@ -78,12 +129,12 @@ public class FormInvoices extends JPanel {
         // Customize combobox appearance
         cboFilterType.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? new Color(70, 70, 70) : new Color(40, 40, 40));
-                setForeground(Color.WHITE);
-                setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-                return this;
+            public JLabel getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                label.setBackground(isSelected ? new Color(70, 70, 70) : new Color(40, 40, 40));
+                label.setForeground(Color.WHITE);
+                label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+                return label;
             }
         });
         
@@ -103,12 +154,12 @@ public class FormInvoices extends JPanel {
         // Customize date filter combobox appearance
         cboDateFilter.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? new Color(70, 70, 70) : new Color(40, 40, 40));
-                setForeground(Color.WHITE);
-                setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-                return this;
+            public JLabel getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                label.setBackground(isSelected ? new Color(70, 70, 70) : new Color(40, 40, 40));
+                label.setForeground(Color.WHITE);
+                label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+                return label;
             }
         });
         
@@ -181,9 +232,7 @@ public class FormInvoices extends JPanel {
             }
         });
         
-        // Add sample data
-        addSampleData();
-        
+ 
         JScrollPane scrollPane = new JScrollPane(invoiceTable);
         scrollPane.setBackground(new Color(40, 40, 40));
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
@@ -232,21 +281,6 @@ public class FormInvoices extends JPanel {
         return button;
     }
     
-    private void addSampleData() {
-        // Add some sample data to the table
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-        String currentDate = dateFormat.format(new Date());
-        
-        Object[][] data = {
-            {"1","1", currentDate, "Nguyễn Văn A", "1,500,000", "Tiền mặt", "Đã thanh toán"},
-            {"2","2", currentDate, "Trần Thị B", "2,300,000", "Chuyển khoản", "Chờ xác nhận"},
-            {"3","3", currentDate, "Lê Văn C", "950,000", "Tiền mặt", "Đã thanh toán"}
-        };
-        
-        for (Object[] row : data) {
-            tableModel.addRow(row);
-        }
-    }
     
     private void initEvent() {
         // Add event listener for filter type combobox

@@ -1,12 +1,20 @@
 package com.team4.shoestore.ui;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
+import com.team4.shoestore.service.ShoeService;
+import com.team4.shoestore.model.Shoe;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.*;
-import java.util.ArrayList;
 import java.util.List;
+import java.net.URL;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 
+
+@Component
 public class FormMenu extends JPanel {
     // Components
     private JPanel mainContentPanel;
@@ -18,14 +26,18 @@ public class FormMenu extends JPanel {
     private JComboBox<String> categoryComboBox;
     private List<Product> products;
     
+
+    @Autowired
+    private ShoeService shoeService;
+
     // Product class to store product information
     private class Product {
         String name;
-        String imagePath;
+        URL imagePath;
         String category;
-        String price;
+        BigDecimal price;
         
-        Product(String name, String imagePath, String category, String price) {
+        Product(String name, URL imagePath, String category, BigDecimal price) {
             this.name = name;
             this.imagePath = imagePath;
             this.category = category;
@@ -34,16 +46,71 @@ public class FormMenu extends JPanel {
     }
     
     public FormMenu() {
+        products = new ArrayList<>();
         initComponents();
         initEvent();
+    }
+
+    @PostConstruct
+    public void init() {
+        LoadMenu();
+    }
+
+    public void LoadMenu() {
+        try {
+            System.out.println("Starting to load menu items...");
+            
+            // Clear existing products
+            products.clear();
+            productsPanel.removeAll();
+            System.out.println("Cleared existing products and panel");
+            
+            // Get shoes from database
+            List<Shoe> shoes = shoeService.getAllShoes();
+            System.out.println("Retrieved " + (shoes != null ? shoes.size() : 0) + " shoes from database");
+            
+            // Add shoes to products list
+            if (shoes != null) {
+                for (Shoe shoe : shoes) {
+                    try {
+                        System.out.println("Processing shoe: " + shoe.getName());
+                        // Get image resource
+                        URL imageUrl = getClass().getResource(shoe.getImageUrl());
+                        if (imageUrl == null) {
+                            System.out.println("Warning: Image not found for shoe: " + shoe.getName() + ", URL: " + shoe.getImageUrl());
+                            continue;
+                        }
+                        
+                        // Create and add product
+                        Product product = new Product(shoe.getName(), imageUrl, shoe.getCategory(), shoe.getPrice());
+                        products.add(product);
+                        System.out.println("Added product to list: " + product.name);
+                        
+                    } catch (Exception e) {
+                        System.err.println("Error adding shoe to menu: " + shoe.getName());
+                        e.printStackTrace();
+                    }
+                }
+            }
+            
+            // Display products
+            displayProducts("Tất cả");
+            System.out.println("Finished loading menu");
+            
+        } catch (Exception e) {
+            System.err.println("Error loading menu: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Error loading menu: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     private void initComponents() {
         setLayout(new BorderLayout());
         setBackground(new Color(33, 33, 33)); // Dark background
         
-        // Initialize products list
-        initProducts();
         
         // Initialize main content
         initMainContent();
@@ -56,16 +123,6 @@ public class FormMenu extends JPanel {
         add(cartPanel, BorderLayout.EAST);
     }
     
-    private void initProducts() {
-        products = new ArrayList<>();
-        // Add sample products
-        products.add(new Product("Nike Air Jordan 1", "View/images/sneaker1.png", "Thể thao", "2,500,000 VNĐ"));
-        products.add(new Product("Nike Air Jordan 2", "View/images/sneaker2.png", "Chạy bộ", "2,800,000 VNĐ"));
-        products.add(new Product("Nike Air Jordan 3", "View/images/sneaker3.png", "Thời trang", "3,000,000 VNĐ"));
-        products.add(new Product("Nike Air Jordan 4", "View/images/sneaker4.png", "Thể thao", "2,700,000 VNĐ"));
-        products.add(new Product("Nike Air Jordan 5", "View/images/sneaker5.png", "Chạy bộ", "2,900,000 VNĐ"));
-        products.add(new Product("Nike Air Jordan 6", "View/images/sneaker6.png", "Thời trang", "3,200,000 VNĐ"));
-    }
     
     private void initMainContent() {
         mainContentPanel = new JPanel(new BorderLayout());
@@ -103,12 +160,10 @@ public class FormMenu extends JPanel {
         headerPanel.add(filterPanel, BorderLayout.EAST);
         
         // Products grid panel
-        productsPanel = new JPanel(new GridLayout(0, 3, 20, 20));
+        productsPanel = new JPanel();
+        productsPanel.setLayout(new GridLayout(0, 3, 20, 20));
         productsPanel.setBackground(new Color(33, 33, 33));
         productsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        
-        // Add all products initially
-        displayProducts("Tất cả");
         
         // Create custom scroll pane
         JScrollPane scrollPane = new JScrollPane(productsPanel);
@@ -135,20 +190,25 @@ public class FormMenu extends JPanel {
     }
     
     private void displayProducts(String category) {
+        System.out.println("Displaying products for category: " + category);
         productsPanel.removeAll();
         
+        int count = 0;
         for (Product product : products) {
             if (category.equals("Tất cả") || product.category.equals(category)) {
                 JPanel productCard = createProductCard(product.name, product.imagePath, product.price);
                 productsPanel.add(productCard);
+                count++;
+                System.out.println("Added card for product: " + product.name);
             }
         }
         
+        System.out.println("Added " + count + " product cards to panel");
         productsPanel.revalidate();
         productsPanel.repaint();
     }
     
-    private JPanel createProductCard(String name, String imagePath, String price) {
+    private JPanel createProductCard(String name, URL imagePath, BigDecimal price) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(new Color(45, 45, 45)); // Dark card background
@@ -172,6 +232,8 @@ public class FormMenu extends JPanel {
             imageLabel.setHorizontalAlignment(JLabel.CENTER);
             imageLabel.setVerticalAlignment(JLabel.CENTER);
         } catch (Exception e) {
+            System.err.println("Error loading image for product: " + name);
+            e.printStackTrace();
             imageLabel.setText("No Image");
             imageLabel.setForeground(Color.WHITE);
             imageLabel.setHorizontalAlignment(JLabel.CENTER);
@@ -183,17 +245,17 @@ public class FormMenu extends JPanel {
         JLabel nameLabel = new JLabel(name);
         nameLabel.setFont(new Font("Arial", Font.BOLD, 14));
         nameLabel.setForeground(Color.WHITE);
-        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        nameLabel.setAlignmentX(0.5f);
         
         // Product price
-        JLabel priceLabel = new JLabel(price);
+        JLabel priceLabel = new JLabel(price.toString() + " VNĐ");
         priceLabel.setFont(new Font("Arial", Font.BOLD, 16));
         priceLabel.setForeground(new Color(255, 215, 0)); // Gold color for price
-        priceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        priceLabel.setAlignmentX(0.5f);
         
         // Add to cart button
         JButton addToCartButton = new JButton("Thêm vào giỏ");
-        addToCartButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        addToCartButton.setAlignmentX(0.5f);
         addToCartButton.setBackground(new Color(60, 60, 60));
         addToCartButton.setForeground(Color.WHITE);
         addToCartButton.setBorderPainted(false);
@@ -295,7 +357,21 @@ public class FormMenu extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String selectedCategory = (String) categoryComboBox.getSelectedItem();
+                System.out.println("Category selected: " + selectedCategory);
                 displayProducts(selectedCategory);
+            }
+        });
+        
+        // Add window listener to refresh display when window becomes visible
+        addHierarchyListener(new HierarchyListener() {
+            @Override
+            public void hierarchyChanged(HierarchyEvent e) {
+                if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0) {
+                    if (isShowing()) {
+                        System.out.println("FormMenu became visible, refreshing display");
+                        LoadMenu();
+                    }
+                }
             }
         });
     }

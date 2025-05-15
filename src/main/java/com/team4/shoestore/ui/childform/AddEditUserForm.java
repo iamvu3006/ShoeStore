@@ -18,10 +18,21 @@ public class AddEditUserForm extends JDialog {
     private static final Color BUTTON_COLOR = new Color(64, 64, 64);
     private static final Color BUTTON_HOVER_COLOR = new Color(80, 80, 80);
     
-    public AddEditUserForm(Frame parent, boolean modal) {
+
+    
+    public AddEditUserForm(Frame parent, boolean modal,int userId) {
         super(parent, modal);
         initComponents();
         initEvent();
+
+        if(userId<0){
+            //Set Form Add New User
+        }
+        else{
+            //Set Form Edit User
+        }
+
+
     }
     
     private void initComponents() {
@@ -161,12 +172,6 @@ public class AddEditUserForm extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 dispose();
             }
-        });
-    }
-    
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new AddEditUserForm(null, true).setVisible(true);
         });
     }
 } 
