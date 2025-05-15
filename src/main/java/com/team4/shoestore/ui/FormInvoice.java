@@ -120,11 +120,11 @@ public class FormInvoice extends JFrame {
     }
     
     private void initEvent() {
-        btnAdd.addActionListener(_ -> {
+        btnAdd.addActionListener(ee -> {
             
         });
         
-        btnEdit.addActionListener(_ -> {
+        btnEdit.addActionListener(ee -> {
             int selectedRow = tblInvoice.getSelectedRow();
             if (selectedRow == -1) {
                 JOptionPane.showMessageDialog(this,
@@ -136,7 +136,7 @@ public class FormInvoice extends JFrame {
            
         });
         
-        btnDelete.addActionListener(_ -> {
+        btnDelete.addActionListener(e -> {
             int selectedRow = tblInvoice.getSelectedRow();
             if (selectedRow == -1) {
                 JOptionPane.showMessageDialog(this,
@@ -156,7 +156,7 @@ public class FormInvoice extends JFrame {
             }
         });
         
-        btnConfirmPayment.addActionListener(_ -> {
+        btnConfirmPayment.addActionListener(ee -> {
             int selectedRow = tblInvoice.getSelectedRow();
             if (selectedRow == -1) {
                 JOptionPane.showMessageDialog(this,
@@ -193,7 +193,7 @@ public class FormInvoice extends JFrame {
             public void insertUpdate(javax.swing.event.DocumentEvent e) { filterTable(); }
         });
         
-        cboStatus.addActionListener(_ -> filterTable());
+        cboStatus.addActionListener(ee -> filterTable());
     }
     
     private void filterTable() {
@@ -281,10 +281,4 @@ public class FormInvoice extends JFrame {
         return button;
     }
     
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            FormInvoice form = new FormInvoice();
-            form.setVisible(true);
-        });
-    }
 } 

@@ -243,7 +243,7 @@ public class DashboardForm extends JPanel {
     }
     
     private void initEvent() {
-        btnSearch.addActionListener(_ -> {
+        btnSearch.addActionListener(ee -> {
             String searchDate = txtSearchDate.getText().trim();
             if (searchDate.isEmpty()) {
                 // If search is empty, show all data
@@ -267,14 +267,4 @@ public class DashboardForm extends JPanel {
         });
     }
     
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Dashboard");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.add(new DashboardForm());
-            frame.setSize(1000, 600);
-            frame.setLocationRelativeTo(null);
-            frame.setVisible(true);
-        });
-    }
 } 

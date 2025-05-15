@@ -1,14 +1,21 @@
 package com.team4.shoestore.ui;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
+import java.util.List;
+import com.team4.shoestore.model.Shoe;
+import com.team4.shoestore.service.ShoeService;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.*;
 
 import javax.imageio.ImageIO;
-import java.io.File;
-import java.io.IOException;
 
+import java.io.IOException;
+import java.net.URL;
+
+@Component
 public class FormShoes extends JPanel {
     // Components
     private JPanel headerPanel;
@@ -33,11 +40,62 @@ public class FormShoes extends JPanel {
     private static final Color TABLE_ROW_COLOR = new Color(40, 40, 40);
     private static final Color TABLE_SELECTION_COLOR = new Color(70, 70, 70);
     
+
+    @Autowired
+    private ShoeService shoeService;
     public FormShoes() {
         initComponents();
         initEvent();
     }
-    
+    @PostConstruct
+    public void init(){
+        LoadAllShoes();
+    }
+
+    public void LoadAllShoes() {
+        try {
+            System.out.println("Starting to load shoes from database...");
+            
+            // Clear existing data
+            tableModel.setRowCount(0);
+            System.out.println("Cleared existing table data");
+            
+            // Get shoes from database
+            List<Shoe> shoes = shoeService.getAllShoes();
+            System.out.println("Retrieved " + (shoes != null ? shoes.size() : 0) + " shoes from database");
+            
+            // Add shoes to table
+            if (shoes != null) {
+                for (Shoe shoe : shoes) {
+                    System.out.println("Adding shoe to table: " + shoe.getName());
+                    // Get image resource
+                    URL imageUrl = getClass().getResource(shoe.getImageUrl());
+                    if (imageUrl == null) {
+                        System.out.println("Warning: Image not found for shoe: " + shoe.getName() + ", URL: " + shoe.getImageUrl());
+                    }
+                    tableModel.addRow(new Object[]{
+                        shoe.getShoeId(),
+                        shoe.getName(),
+                        shoe.getBrand().getName(),
+                        shoe.getCategory(),
+                        shoe.getPrice(),
+                        imageUrl,
+                        shoe.isStatus() ? "Còn hàng" : "Hết hàng"
+                    });
+                }
+            }
+            System.out.println("Finished loading shoes");
+        } catch (Exception e) {
+            System.err.println("Error loading shoes: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Error loading shoes: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
     private void initComponents() {
         setLayout(new BorderLayout());
         setBackground(BACKGROUND_COLOR);
@@ -96,7 +154,7 @@ public class FormShoes extends JPanel {
         // Customize combobox appearance
         cboFilterType.setRenderer(new DefaultListCellRenderer() {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            public JLabel getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 setBackground(isSelected ? TABLE_SELECTION_COLOR : PANEL_COLOR);
                 setForeground(TEXT_COLOR);
@@ -150,8 +208,8 @@ public class FormShoes extends JPanel {
         shoeTable.getColumnModel().getColumn(1).setPreferredWidth(200);  // Tên giày
         shoeTable.getColumnModel().getColumn(2).setPreferredWidth(120);  // Thương hiệu
         shoeTable.getColumnModel().getColumn(3).setPreferredWidth(120);  // Thể loại
-        shoeTable.getColumnModel().getColumn(4).setPreferredWidth(120);  // Giá
-        shoeTable.getColumnModel().getColumn(5).setPreferredWidth(90);   // Ảnh
+        shoeTable.getColumnModel().getColumn(4).setPreferredWidth(100);  // Giá
+        shoeTable.getColumnModel().getColumn(5).setPreferredWidth(100);  // Ảnh
         shoeTable.getColumnModel().getColumn(6).setPreferredWidth(100);  // Trạng thái
         
         // Customize table appearance
@@ -229,14 +287,14 @@ public class FormShoes extends JPanel {
             }
             
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            public JLabel getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel comp = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (value != null) {
                     String status = value.toString();
                     if (status.equals("Còn hàng")) {
-                        setForeground(new Color(46, 204, 113)); // Màu xanh lá
+                        comp.setForeground(new Color(46, 204, 113)); // Màu xanh lá
                     } else {
-                        setForeground(new Color(231, 76, 60)); // Màu đỏ
+                        comp.setForeground(new Color(231, 76, 60)); // Màu đỏ
                     }
                 }
                 return comp;
@@ -246,8 +304,6 @@ public class FormShoes extends JPanel {
         // Customize Image column with image renderer
         shoeTable.getColumnModel().getColumn(5).setCellRenderer(new ImageRenderer());
         
-        // Add sample data
-        addSampleData();
         
         JScrollPane scrollPane = new JScrollPane(shoeTable);
         scrollPane.setBackground(TABLE_ROW_COLOR);
@@ -302,7 +358,7 @@ public class FormShoes extends JPanel {
         button.setBackground(BUTTON_COLOR);
         button.setBorderPainted(false);
         button.setFocusPainted(false);
-        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setAlignmentX(0.5f);
         
         // Add hover effect
         button.addMouseListener(new MouseAdapter() {
@@ -317,17 +373,6 @@ public class FormShoes extends JPanel {
         return button;
     }
     
-    private void addSampleData() {
-        Object[][] data = {
-            {"1", "Nike Air Max", "Nike", "Chạy bộ", "2,500,000", "View/images/sneaker1.png", "Còn hàng"},
-            {"2", "Adidas Ultraboost", "Adidas", "Thể thao", "3,200,000", "View/images/sneaker2.png", "Hết hàng"},
-            {"3", "Puma RS-X", "Puma", "Thời trang", "1,800,000", "View/images/sneaker3.png", "Còn hàng"}
-        };
-        
-        for (Object[] row : data) {
-            tableModel.addRow(row);
-        }
-    }
     
     private void initEvent() {
         // Add event listener for search button
@@ -339,7 +384,7 @@ public class FormShoes extends JPanel {
         private static final int IMAGE_HEIGHT = 60;
         
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+        public JLabel getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             JLabel label = new JLabel();
             label.setHorizontalAlignment(SwingConstants.CENTER);
             label.setBackground(isSelected ? TABLE_SELECTION_COLOR : TABLE_ROW_COLOR);
@@ -353,17 +398,14 @@ public class FormShoes extends JPanel {
             
             if (value != null) {
                 try {
-                    // Load image from file
-                    String imagePath = value.toString();
-                    File imageFile = new File(imagePath);
-                    if (imageFile.exists()) {
-                        Image img = ImageIO.read(imageFile);
+                    // Load image from resource
+                    URL imageUrl = (URL) value;
+                    if (imageUrl != null) {
+                        Image img = ImageIO.read(imageUrl);
                         // Scale image to fit cell
                         Image scaledImg = img.getScaledInstance(IMAGE_WIDTH, IMAGE_HEIGHT, Image.SCALE_SMOOTH);
                         label.setIcon(new ImageIcon(scaledImg));
                     } else {
-                        System.out.println("Image not found: " + imagePath);
-                        label.setText("No Image");
                     }
                 } catch (IOException e) {
                     System.out.println("Error loading image: " + e.getMessage());

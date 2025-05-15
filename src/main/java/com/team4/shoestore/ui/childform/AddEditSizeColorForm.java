@@ -122,7 +122,7 @@ public class AddEditSizeColorForm extends JDialog {
     }
     
     private void initEvent() {
-        btnSave.addActionListener(_ -> {
+        btnSave.addActionListener(e -> {
             String size = (String) cboSize.getSelectedItem();
             String color = (String) cboColor.getSelectedItem();
             String quantity = txtQuantity.getText().trim();
