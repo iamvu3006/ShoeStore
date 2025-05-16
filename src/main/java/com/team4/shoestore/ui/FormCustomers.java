@@ -306,12 +306,57 @@ public class FormCustomers extends JPanel {
     }
     
     private void initEvent() {
-        // Add event listeners here
-        
-        // Add event listener for filter type combobox
-        cboFilterType.addActionListener(new ActionListener() {
+        // Search button event
+        btnSearch.addActionListener(e -> {
+            String filterType = cboFilterType.getSelectedItem().toString();
+            String searchText = txtSearch.getText().toLowerCase().trim();
+            
+            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
+            customerTable.setRowSorter(sorter);
+            
+            RowFilter<DefaultTableModel, Object> rowFilter = new RowFilter<DefaultTableModel, Object>() {
             @Override
-            public void actionPerformed(ActionEvent e) {
+                public boolean include(Entry<? extends DefaultTableModel, ? extends Object> entry) {
+                    if (filterType.equals("Ngày đăng ký")) {
+                        String selectedDate = cboDateFilter.getSelectedItem().toString();
+                        String joinDate = entry.getStringValue(3); // Ngày đăng ký ở cột 3
+                        
+                        // Implement date filtering logic based on selectedDate
+                        switch (selectedDate) {
+                            case "Hôm nay":
+                                return joinDate.equals(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                            case "Hôm qua":
+                                return joinDate.equals(java.time.LocalDate.now().minusDays(1).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                            case "7 ngày qua":
+                                java.time.LocalDate sevenDaysAgo = java.time.LocalDate.now().minusDays(7);
+                                return java.time.LocalDate.parse(joinDate).isAfter(sevenDaysAgo);
+                            case "30 ngày qua":
+                                java.time.LocalDate thirtyDaysAgo = java.time.LocalDate.now().minusDays(30);
+                                return java.time.LocalDate.parse(joinDate).isAfter(thirtyDaysAgo);
+                            default:
+                                return true;
+                        }
+                    } else if (filterType.equals("Tên khách hàng")) {
+                        return entry.getStringValue(1).toLowerCase().contains(searchText);
+                    } else if (filterType.equals("Số điện thoại")) {
+                        return entry.getStringValue(2).toLowerCase().contains(searchText);
+                    }
+                    return true;
+                }
+            };
+            
+            sorter.setRowFilter(rowFilter);
+        });
+
+        // Add search on type
+        txtSearch.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { btnSearch.doClick(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { btnSearch.doClick(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { btnSearch.doClick(); }
+        });
+
+        // Filter type change event
+        cboFilterType.addActionListener(e -> {
                 String selectedFilter = (String) cboFilterType.getSelectedItem();
                 if (selectedFilter.equals("Ngày đăng ký")) {
                     txtSearch.setVisible(false);
@@ -320,8 +365,188 @@ public class FormCustomers extends JPanel {
                     txtSearch.setVisible(true);
                     cboDateFilter.setVisible(false);
                 }
+            btnSearch.doClick(); // Trigger search when filter type changes
+        });
+
+        // Date filter change event
+        cboDateFilter.addActionListener(e -> btnSearch.doClick());
+
+        // Add new customer button event
+        btnAdd.addActionListener(e -> {
+            JDialog dialog = new JDialog();
+            dialog.setTitle("Thêm khách hàng mới");
+            dialog.setModal(true);
+            dialog.setLayout(new GridLayout(4, 2, 10, 10));
+            dialog.setSize(400, 200);
+            
+            JTextField txtName = new JTextField();
+            JTextField txtPhone = new JTextField();
+            
+            dialog.add(new JLabel("Họ tên:"));
+            dialog.add(txtName);
+            dialog.add(new JLabel("Số điện thoại:"));
+            dialog.add(txtPhone);
+            
+            JButton btnSave = new JButton("Lưu");
+            btnSave.addActionListener(ev -> {
+                try {
+                    String name = txtName.getText().trim();
+                    String phone = txtPhone.getText().trim();
+                    
+                    if (name.isEmpty() || phone.isEmpty()) {
+                        throw new Exception("Vui lòng điền đầy đủ thông tin");
+                    }
+                    
+                    Customer customer = new Customer();
+                    customer.setName(name);
+                    customer.setPhone(phone);
+                    customer.setJoinDate(java.time.LocalDate.now());
+                    
+                    customerService.saveCustomer(customer);
+                    loadCustomersFromDatabase();
+                    dialog.dispose();
+                    
+                    JOptionPane.showMessageDialog(this,
+                        "Đã thêm khách hàng thành công!",
+                        "Thành công",
+                        JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Lỗi: " + ex.getMessage(),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            });
+            
+            JButton btnCancel = new JButton("Hủy");
+            btnCancel.addActionListener(ev -> dialog.dispose());
+            
+            dialog.add(btnSave);
+            dialog.add(btnCancel);
+            
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
+        });
+
+        // Edit customer button event
+        btnEdit.addActionListener(e -> {
+            int selectedRow = customerTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn khách hàng cần sửa",
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Convert view index to model index if table is sorted
+            int modelRow = customerTable.convertRowIndexToModel(selectedRow);
+            
+            try {
+                Integer customerId = Integer.parseInt(tableModel.getValueAt(modelRow, 0).toString());
+                Customer customer = customerService.getCustomerById(customerId);
+                
+                if (customer != null) {
+                    JDialog dialog = new JDialog();
+                    dialog.setTitle("Sửa thông tin khách hàng");
+                    dialog.setModal(true);
+                    dialog.setLayout(new GridLayout(4, 2, 10, 10));
+                    dialog.setSize(400, 200);
+                    
+                    JTextField txtName = new JTextField(customer.getName());
+                    JTextField txtPhone = new JTextField(customer.getPhone());
+                    
+                    dialog.add(new JLabel("Họ tên:"));
+                    dialog.add(txtName);
+                    dialog.add(new JLabel("Số điện thoại:"));
+                    dialog.add(txtPhone);
+                    
+                    JButton btnSave = new JButton("Lưu");
+                    btnSave.addActionListener(ev -> {
+                        try {
+                            String name = txtName.getText().trim();
+                            String phone = txtPhone.getText().trim();
+                            
+                            if (name.isEmpty() || phone.isEmpty()) {
+                                throw new Exception("Vui lòng điền đầy đủ thông tin");
+                            }
+                            
+                            customer.setName(name);
+                            customer.setPhone(phone);
+                            
+                            customerService.saveCustomer(customer);
+                            loadCustomersFromDatabase();
+                            dialog.dispose();
+                            
+                            JOptionPane.showMessageDialog(this,
+                                "Đã cập nhật thông tin khách hàng thành công!",
+                                "Thành công",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        } catch (Exception ex) {
+                            JOptionPane.showMessageDialog(dialog,
+                                "Lỗi: " + ex.getMessage(),
+                                "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+                    
+                    JButton btnCancel = new JButton("Hủy");
+                    btnCancel.addActionListener(ev -> dialog.dispose());
+                    
+                    dialog.add(btnSave);
+                    dialog.add(btnCancel);
+                    
+                    dialog.setLocationRelativeTo(this);
+                    dialog.setVisible(true);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi lấy thông tin khách hàng: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
             }
         });
 
+        // Delete customer button event
+        btnDelete.addActionListener(e -> {
+            int selectedRow = customerTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn khách hàng cần xóa",
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Convert view index to model index if table is sorted
+            int modelRow = customerTable.convertRowIndexToModel(selectedRow);
+            
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Bạn có chắc chắn muốn xóa khách hàng này?",
+                "Xác nhận xóa",
+                JOptionPane.YES_NO_OPTION);
+                
+            if (confirm == JOptionPane.YES_OPTION) {
+                try {
+                    Integer customerId = Integer.parseInt(tableModel.getValueAt(modelRow, 0).toString());
+                    Customer customer = customerService.getCustomerById(customerId);
+                    if (customer != null) {
+                        customerService.deleteCustomer(customerId);
+                        loadCustomersFromDatabase(); // Refresh table
+                        JOptionPane.showMessageDialog(this,
+                            "Đã xóa khách hàng thành công!",
+                            "Thành công",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        throw new Exception("Không tìm thấy thông tin khách hàng");
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this,
+                        "Lỗi khi xóa khách hàng: " + ex.getMessage(),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
     }
 } 

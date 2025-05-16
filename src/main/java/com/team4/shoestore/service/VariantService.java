@@ -41,4 +41,12 @@ public class VariantService {
     public List<Variant> findVariantsByColor(String color) {
         return variantRepository.findByColor(color);
     }
+
+    public Variant getDefaultVariantForShoe(Integer shoeId) {
+        List<Variant> variants = findVariantsByShoeId(shoeId);
+        if (variants != null && !variants.isEmpty()) {
+            return variants.get(0); // Return the first variant
+        }
+        return null;
+    }
 }

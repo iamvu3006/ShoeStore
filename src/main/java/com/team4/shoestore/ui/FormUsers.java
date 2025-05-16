@@ -30,6 +30,9 @@ public class FormUsers extends JPanel {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private AddEditUserForm addEditUserForm;
+
     public FormUsers() {
         initComponents();
         initEvent();
@@ -271,10 +274,10 @@ public class FormUsers extends JPanel {
         btnAdd.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                FormUsers.this.setVisible(false);
-                SwingUtilities.getWindowAncestor(FormUsers.this).dispose();
-                AddEditUserForm addEditUserForm = new AddEditUserForm((Frame)SwingUtilities.getWindowAncestor(FormUsers.this), true, -1);
+                Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(FormUsers.this);
+                addEditUserForm.setupDialog(parentFrame, true, -1);
                 addEditUserForm.setVisible(true);
+                loadUsersFromDatabase();
             }
         });
 
@@ -284,33 +287,63 @@ public class FormUsers extends JPanel {
                 int selectedRow = userTable.getSelectedRow();
                 if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(FormUsers.this, 
-                        "Please select a user to edit", 
-                        "No Selection", 
+                        "Vui lòng chọn người dùng để sửa", 
+                        "Chưa chọn", 
                         JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 
                 int userId = (int) userTable.getValueAt(selectedRow, 0);
-                FormUsers.this.setVisible(false);
-                SwingUtilities.getWindowAncestor(FormUsers.this).dispose();
-                AddEditUserForm editUserForm = new AddEditUserForm((Frame)SwingUtilities.getWindowAncestor(FormUsers.this), false, userId);
-                editUserForm.setVisible(true);
+                Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(FormUsers.this);
+                addEditUserForm.setupDialog(parentFrame, false, userId);
+                addEditUserForm.setVisible(true);
+                loadUsersFromDatabase();
             }
         });
 
         btnDelete.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(userTable.getSelectedRow() == -1){
+                int selectedRow = userTable.getSelectedRow();
+                if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(FormUsers.this, 
-                        "Please select a user to delete", 
-                        "No Selection", 
+                        "Vui lòng chọn người dùng để xóa", 
+                        "Chưa chọn", 
                         JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-                int userId = (int) userTable.getValueAt(userTable.getSelectedRow(), 0);
-                userService.deleteUser(userId);
-                loadUsersFromDatabase();
+                
+                int userId = (int) userTable.getValueAt(selectedRow, 0);
+                String username = (String) userTable.getValueAt(selectedRow, 1);
+                
+                // Show confirmation dialog
+                int confirm = JOptionPane.showConfirmDialog(
+                    FormUsers.this,
+                    "Bạn có chắc chắn muốn xóa người dùng '" + username + "'?",
+                    "Xác nhận xóa",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+                );
+                
+                if (confirm == JOptionPane.YES_OPTION) {
+                    try {
+                        userService.deleteUser(userId);
+                        loadUsersFromDatabase();
+                        JOptionPane.showMessageDialog(
+                            FormUsers.this,
+                            "Đã xóa người dùng thành công",
+                            "Thành công",
+                            JOptionPane.INFORMATION_MESSAGE
+                        );
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(
+                            FormUsers.this,
+                            "Lỗi khi xóa người dùng: " + ex.getMessage(),
+                            "Lỗi",
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+                }
             }
         });
     }

@@ -9,9 +9,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.*;
-
+import javax.swing.RowFilter;
 import javax.imageio.ImageIO;
-
 import java.io.IOException;
 import java.net.URL;
 
@@ -28,6 +27,7 @@ public class FormShoes extends JPanel {
     private JButton btnAdd;
     private JButton btnEdit;
     private JButton btnDelete;
+    private JButton btnDetail;
     private JComboBox<String> cboFilterType;
     
     // Colors
@@ -334,7 +334,7 @@ public class FormShoes extends JPanel {
         
         btnEdit = createButton("Sửa");
         btnDelete = createButton("Xóa");
-        JButton btnDetail = createButton("Chi tiết");
+        btnDetail = createButton("Chi tiết");
         
         // Set button sizes
         Dimension buttonSize = new Dimension(150, 35);
@@ -375,7 +375,170 @@ public class FormShoes extends JPanel {
     
     
     private void initEvent() {
-        // Add event listener for search button
+        // Search button event
+        btnSearch.addActionListener(e -> {
+            String searchText = txtSearch.getText().toLowerCase().trim();
+            String filterType = cboFilterType.getSelectedItem().toString();
+            
+            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
+            shoeTable.setRowSorter(sorter);
+            
+            if (searchText.isEmpty()) {
+                sorter.setRowFilter(null);
+            } else {
+                RowFilter<DefaultTableModel, Object> rowFilter = new RowFilter<DefaultTableModel, Object>() {
+                    @Override
+                    public boolean include(Entry<? extends DefaultTableModel, ? extends Object> entry) {
+                        switch (filterType) {
+                            case "Tên giày":
+                                return entry.getStringValue(1).toLowerCase().contains(searchText);
+                            case "Thương hiệu":
+                                return entry.getStringValue(2).toLowerCase().contains(searchText);
+                            case "Thể loại":
+                                return entry.getStringValue(3).toLowerCase().contains(searchText);
+                            default:
+                                return true;
+                        }
+                    }
+                };
+                sorter.setRowFilter(rowFilter);
+            }
+        });
+
+        // Add new shoe button event
+        btnAdd.addActionListener(e -> {
+            // TODO: Implement add shoe dialog
+            JOptionPane.showMessageDialog(this,
+                "Chức năng thêm mới giày đang được phát triển",
+                "Thông báo",
+                JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        // View details button event
+        btnDetail.addActionListener(e -> {
+            int selectedRow = shoeTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn giày để xem chi tiết",
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Convert view index to model index if table is sorted
+            int modelRow = shoeTable.convertRowIndexToModel(selectedRow);
+            
+            try {
+                Integer shoeId = Integer.parseInt(tableModel.getValueAt(modelRow, 0).toString());
+                Shoe shoe = shoeService.getShoeById(shoeId);
+                
+                if (shoe != null) {
+                    String details = String.format("""
+                        Chi tiết giày:
+                        ID: %d
+                        Tên: %s
+                        Thương hiệu: %s
+                        Thể loại: %s
+                        Giá: %s
+                        Trạng thái: %s
+                        """,
+                        shoe.getShoeId(),
+                        shoe.getName(),
+                        shoe.getBrand().getName(),
+                        shoe.getCategory(),
+                        shoe.getPrice(),
+                        shoe.isStatus() ? "Còn hàng" : "Hết hàng"
+                    );
+                    
+                    JOptionPane.showMessageDialog(this,
+                        details,
+                        "Chi tiết giày",
+                        JOptionPane.INFORMATION_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi lấy thông tin giày: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Edit button event
+        btnEdit.addActionListener(e -> {
+            int selectedRow = shoeTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn giày cần sửa",
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Convert view index to model index if table is sorted
+            int modelRow = shoeTable.convertRowIndexToModel(selectedRow);
+            
+            try {
+                Integer shoeId = Integer.parseInt(tableModel.getValueAt(modelRow, 0).toString());
+                Shoe shoe = shoeService.getShoeById(shoeId);
+                
+                if (shoe != null) {
+                    // TODO: Implement edit shoe dialog
+                    JOptionPane.showMessageDialog(this,
+                        "Chức năng sửa thông tin giày đang được phát triển",
+                        "Thông báo",
+                        JOptionPane.INFORMATION_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi lấy thông tin giày: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Delete button event
+        btnDelete.addActionListener(e -> {
+            int selectedRow = shoeTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn giày cần xóa",
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Convert view index to model index if table is sorted
+            int modelRow = shoeTable.convertRowIndexToModel(selectedRow);
+            
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Bạn có chắc chắn muốn xóa giày này?",
+                "Xác nhận xóa",
+                JOptionPane.YES_NO_OPTION);
+                
+            if (confirm == JOptionPane.YES_OPTION) {
+                try {
+                    Integer shoeId = Integer.parseInt(tableModel.getValueAt(modelRow, 0).toString());
+                    shoeService.deleteShoe(shoeId);
+                    LoadAllShoes(); // Refresh table
+                    JOptionPane.showMessageDialog(this,
+                        "Đã xóa giày thành công!",
+                        "Thành công",
+                        JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this,
+                        "Lỗi khi xóa giày: " + ex.getMessage(),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // Add search on type
+        txtSearch.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { btnSearch.doClick(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { btnSearch.doClick(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { btnSearch.doClick(); }
+        });
     }
     
     // Add image renderer class

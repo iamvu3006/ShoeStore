@@ -46,9 +46,6 @@ public class FormHome extends JFrame {
     }
     
     private void initSidebar() {
-
-
-
         sidebarPanel = new JPanel();
         sidebarPanel.setPreferredSize(new Dimension(200, 0));
         sidebarPanel.setBackground(new Color(45, 45, 45)); // Darker sidebar
@@ -158,32 +155,42 @@ public class FormHome extends JFrame {
                 button.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        String buttonText = button.getText();
-                        switch (buttonText) {
-                            case "Menu":
-                                loadForm(applicationContext.getBean(FormMenu.class));
-                                break;
-                            case "Invoice":
-                                loadForm(applicationContext.getBean(FormInvoices.class));
-                                break;
-                            case "Shoes":
-                                loadForm(applicationContext.getBean(FormShoes.class));
-                                break;
-                            case "Brand":
-                                loadForm(applicationContext.getBean(FormBrands.class));
-                                break;
-                            case "Customers":
-                                loadForm(applicationContext.getBean(FormCustomers.class));
-                                break;
-                            case "Users":
-                                loadForm(applicationContext.getBean(FormUsers.class));
-                                break;
-                            case "Dashboard":
-                                loadForm(applicationContext.getBean(DashboardForm.class));
-                                break;
-                            case "Logout":
-                                System.exit(0);
-                                break;
+                        try {
+                            String buttonText = button.getText();
+                            System.out.println("Clicked button: " + buttonText); // Debug log
+                            switch (buttonText) {
+                                case "Menu":
+                                    loadForm(applicationContext.getBean(FormMenu.class));
+                                    break;
+                                case "Invoice":
+                                    loadForm(applicationContext.getBean(FormInvoices.class));
+                                    break;
+                                case "Shoes":
+                                    loadForm(applicationContext.getBean(FormShoes.class));
+                                    break;
+                                case "Brand":
+                                    loadForm(applicationContext.getBean(FormBrands.class));
+                                    break;
+                                case "Customers":
+                                    loadForm(applicationContext.getBean(FormCustomers.class));
+                                    break;
+                                case "Users":
+                                    loadForm(applicationContext.getBean(FormUsers.class));
+                                    break;
+                                case "Logout":
+                                    System.exit(0);
+                                    break;
+                                case "Dashboard":
+                                    System.out.println("Loading Dashboard..."); // Debug log
+                                    loadForm(applicationContext.getBean(DashboardForm.class));
+                                    break;
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            JOptionPane.showMessageDialog(FormHome.this,
+                                "Lỗi khi xử lý sự kiện: " + ex.getMessage(),
+                                "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
                         }
                     }
                 });
@@ -192,10 +199,22 @@ public class FormHome extends JFrame {
     }
     
     private void loadForm(JPanel form) {
-        panelLoader.removeAll();
-        panelLoader.add(form, BorderLayout.CENTER);
-        panelLoader.revalidate();
-        panelLoader.repaint();
+        try {
+            panelLoader.removeAll();
+            if (form instanceof DashboardForm) {
+                DashboardForm dashboard = (DashboardForm) form;
+                dashboard.setupAndDisplay();
+            }
+            panelLoader.add(form, BorderLayout.CENTER);
+            panelLoader.revalidate();
+            panelLoader.repaint();
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Lỗi khi tải form: " + e.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+        }
     }
 
 }

@@ -3,13 +3,25 @@ package com.team4.shoestore.ui.childform;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import com.team4.shoestore.service.UserService;
+import com.team4.shoestore.model.User;
+import com.team4.shoestore.model.User.Role;
+import jakarta.annotation.PostConstruct;
 
+@Component
 public class AddEditUserForm extends JDialog {
+    @Autowired
+    private UserService userService;
+    
     private JTextField txtUsername;
     private JPasswordField txtPassword;
-    private JComboBox<String> cboRole;
+    private JComboBox<Role> cboRole;
     private JButton btnSave;
     private JButton btnCancel;
+    private boolean isAddMode;
+    private int userId;
     
     // Colors
     private static final Color BACKGROUND_COLOR = new Color(30, 30, 30);
@@ -17,22 +29,42 @@ public class AddEditUserForm extends JDialog {
     private static final Color TEXT_COLOR = new Color(221, 221, 221);
     private static final Color BUTTON_COLOR = new Color(64, 64, 64);
     private static final Color BUTTON_HOVER_COLOR = new Color(80, 80, 80);
-    
 
-    
-    public AddEditUserForm(Frame parent, boolean modal,int userId) {
-        super(parent, modal);
+    public AddEditUserForm() {
+        // Default constructor for Spring
+    }
+    @PostConstruct
+    public void init() {
         initComponents();
         initEvent();
+    }
 
-        if(userId<0){
-            //Set Form Add New User
+    public void setupDialog(Frame parent, boolean modal, int userId) {
+        super.setModal(modal);
+        setLocationRelativeTo(parent);
+        this.userId = userId;
+        this.isAddMode = (userId < 0);
+
+        if (!isAddMode) {
+            loadUserData();
         }
-        else{
-            //Set Form Edit User
+    }
+
+    private void loadUserData() {
+        try {
+            User user = userService.getUserById(userId);
+            txtUsername.setText(user.getUsername());
+            txtPassword.setText(user.getPassword());
+            cboRole.setSelectedItem(user.getRole());
+            setTitle("Sửa người dùng");
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Lỗi khi tải thông tin người dùng: " + e.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+            dispose();
         }
-
-
     }
     
     private void initComponents() {
@@ -94,8 +126,7 @@ public class AddEditUserForm extends JDialog {
         
         gbc.gridx = 1;
         gbc.weightx = 1.0;
-        String[] roles = {"Admin", "Nhân viên"};
-        cboRole = new JComboBox<>(roles);
+        cboRole = new JComboBox<>(Role.values());
         cboRole.setPreferredSize(new Dimension(200, 30));
         cboRole.setBackground(PANEL_COLOR);
         cboRole.setForeground(TEXT_COLOR);
@@ -165,7 +196,14 @@ public class AddEditUserForm extends JDialog {
     }
     
     private void initEvent() {
-
+        btnSave.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (validateInput()) {
+                    saveUser();
+                }
+            }
+        });
         
         btnCancel.addActionListener(new ActionListener() {
             @Override
@@ -173,5 +211,69 @@ public class AddEditUserForm extends JDialog {
                 dispose();
             }
         });
+    }
+    
+    private boolean validateInput() {
+        String username = txtUsername.getText().trim();
+        String password = new String(txtPassword.getPassword()).trim();
+        
+        if (username.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                "Vui lòng nhập tên đăng nhập",
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+            txtUsername.requestFocus();
+            return false;
+        }
+        
+        if (password.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                "Vui lòng nhập mật khẩu",
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+            txtPassword.requestFocus();
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private void saveUser() {
+        try {
+            String username = txtUsername.getText().trim();
+            String password = new String(txtPassword.getPassword()).trim();
+            Role role = (Role) cboRole.getSelectedItem();
+            
+            User user;
+            if (isAddMode) {
+                user = new User();
+            } else {
+                user = userService.getUserById(userId);
+            }
+            
+            user.setUsername(username);
+            user.setPassword(password);
+            user.setRole(role);
+            
+            if (isAddMode) {
+                userService.AddNewUser(user);
+            } else {
+                userService.UpdateUser(user);
+            }
+            
+            JOptionPane.showMessageDialog(this,
+                isAddMode ? "Thêm người dùng thành công" : "Cập nhật người dùng thành công",
+                "Thành công",
+                JOptionPane.INFORMATION_MESSAGE);
+                
+            dispose();
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "Lỗi khi lưu người dùng: " + e.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+        }
     }
 } 

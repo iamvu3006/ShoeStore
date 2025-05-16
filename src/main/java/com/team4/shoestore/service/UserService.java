@@ -1,9 +1,12 @@
 package com.team4.shoestore.service;
 
 import com.team4.shoestore.model.User;
+import com.team4.shoestore.model.Customer;
 import com.team4.shoestore.repository.UserRepository;
+import com.team4.shoestore.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,8 +17,10 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private CustomerRepository customerRepository;
+
     public List<User> getAllUsers() {
-        
         return userRepository.findAll();
     }
     
@@ -35,7 +40,29 @@ public class UserService {
         return userRepository.save(user);
     }
     
+    @Transactional
     public void deleteUser(Integer id) {
+        User user = getUserById(id);
+        
+        // Check if user is an admin
+        if (user.getRole() == User.Role.ADMIN) {
+            // Count number of admins
+            long adminCount = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == User.Role.ADMIN)
+                .count();
+            
+            if (adminCount <= 1) {
+                throw new RuntimeException("Không thể xóa admin cuối cùng trong hệ thống!");
+            }
+        }
+        
+        // Remove customer reference if exists
+        Customer customer = user.getCustomer();
+        if (customer != null) {
+            customer.setUser(null);
+            customerRepository.save(customer);
+        }
+        
         userRepository.deleteById(id);
     }
 
@@ -47,6 +74,7 @@ public class UserService {
             .collect(Collectors.toList());
     }
 
+    @Transactional
     public void AddNewUser(User user) {
         if (user == null) {
             throw new IllegalArgumentException("User cannot be null");
@@ -54,16 +82,12 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
     public void DeleteUser(Integer id) {
-        if (id == null) {
-            throw new IllegalArgumentException("User ID cannot be null");
-        }
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found with ID: " + id);
-        }
-        userRepository.deleteById(id);
+        deleteUser(id);
     }
 
+    @Transactional
     public void UpdateUser(User user) {
         if (user == null || user.getUserId() <= 0) {
             throw new IllegalArgumentException("User cannot be null and User ID must be greater than 0");

@@ -9,6 +9,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.*;
+import javax.swing.RowFilter;
+import javax.swing.table.TableRowSorter;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.RowFilter.Entry;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Component
 public class FormInvoices extends JPanel {
@@ -297,6 +304,50 @@ public class FormInvoices extends JPanel {
                 }
             }
         });
+
+        // Add event listener for search button
+        btnSearch.addActionListener(e -> {
+            String filterType = cboFilterType.getSelectedItem().toString();
+            String searchText = txtSearch.getText().toLowerCase().trim();
+            
+            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
+            invoiceTable.setRowSorter(sorter);
+            
+            RowFilter<DefaultTableModel, Object> rowFilter = new RowFilter<DefaultTableModel, Object>() {
+                @Override
+                public boolean include(Entry<? extends DefaultTableModel, ? extends Object> entry) {
+                    if (filterType.equals("Ngày")) {
+                        String selectedDate = cboDateFilter.getSelectedItem().toString();
+                        String orderDate = entry.getStringValue(2); // Ngày tạo ở cột 2
+                        
+                        // Implement date filtering logic based on selectedDate
+                        switch (selectedDate) {
+                            case "Hôm nay":
+                                return orderDate.equals(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                            case "Hôm qua":
+                                return orderDate.equals(java.time.LocalDate.now().minusDays(1).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                            case "7 ngày qua":
+                                java.time.LocalDate sevenDaysAgo = java.time.LocalDate.now().minusDays(7);
+                                return java.time.LocalDate.parse(orderDate).isAfter(sevenDaysAgo);
+                            case "30 ngày qua":
+                                java.time.LocalDate thirtyDaysAgo = java.time.LocalDate.now().minusDays(30);
+                                return java.time.LocalDate.parse(orderDate).isAfter(thirtyDaysAgo);
+                            default:
+                                return true;
+                        }
+                    } else if (filterType.equals("Tên khách hàng")) {
+                        String customerName = entry.getStringValue(3).toLowerCase(); // Tên khách hàng ở cột 3
+                        return customerName.contains(searchText);
+                    } else if (filterType.equals("Số tiền")) {
+                        String amount = entry.getStringValue(4).replaceAll("[^0-9]", ""); // Tổng tiền ở cột 4
+                        return amount.contains(searchText.replaceAll("[^0-9]", ""));
+                    }
+                    return true;
+                }
+            };
+            
+            sorter.setRowFilter(rowFilter);
+        });
         
         // Add event listener for confirm payment button
         btnConfirmPayment.addActionListener(e -> {
@@ -309,10 +360,13 @@ public class FormInvoices extends JPanel {
                 return;
             }
             
-            String status = (String) invoiceTable.getValueAt(selectedRow, 6);
-            if (!status.equals("Chờ xác nhận")) {
+            // Convert view index to model index if table is sorted
+            int modelRow = invoiceTable.convertRowIndexToModel(selectedRow);
+            
+            String status = tableModel.getValueAt(modelRow, 6).toString();
+            if (!status.equals("Chưa thanh toán")) {
                 JOptionPane.showMessageDialog(this,
-                    "Chỉ có thể xác nhận thanh toán cho hóa đơn đang chờ xác nhận",
+                    "Chỉ có thể xác nhận thanh toán cho hóa đơn chưa thanh toán",
                     "Thông báo",
                     JOptionPane.WARNING_MESSAGE);
                 return;
@@ -324,11 +378,30 @@ public class FormInvoices extends JPanel {
                 JOptionPane.YES_NO_OPTION);
                 
             if (confirm == JOptionPane.YES_OPTION) {
-                
-                tableModel.setValueAt("Đã thanh toán", selectedRow, 6);
+                try {
+                    // Get order ID from the table
+                    Long orderId = Long.parseLong(tableModel.getValueAt(modelRow, 0).toString());
+                    
+                    // Update payment status in database
+                    Order order = orderService.getOrderById(orderId.intValue());
+                    order.setPaymentStatus(true);
+                    orderService.saveOrder(order);
+                    
+                    // Update table
+                    tableModel.setValueAt("Đã thanh toán", modelRow, 6);
+                    
+                    JOptionPane.showMessageDialog(this,
+                        "Đã xác nhận thanh toán thành công!",
+                        "Thành công",
+                        JOptionPane.INFORMATION_MESSAGE);
+                        
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this,
+                        "Lỗi khi cập nhật trạng thái thanh toán: " + ex.getMessage(),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
-        
-        
     }
 }

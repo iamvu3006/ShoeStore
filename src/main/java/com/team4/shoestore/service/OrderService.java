@@ -72,4 +72,13 @@ public class OrderService {
         order.setPaymentStatus(status);
         return orderRepository.save(order);
     }
+
+    public List<Order> getOrdersByDate(LocalDateTime date) {
+        LocalDateTime endDate = date.plusDays(1);
+        return findOrdersByDateRange(date, endDate);
+    }
+
+    public List<Order> getOrdersBetweenDates(LocalDateTime startDate, LocalDateTime endDate) {
+        return findOrdersByDateRange(startDate, endDate);
+    }
 }

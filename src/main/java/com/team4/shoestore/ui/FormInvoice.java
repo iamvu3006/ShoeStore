@@ -120,10 +120,11 @@ public class FormInvoice extends JFrame {
     }
     
     private void initEvent() {
-        btnAdd.addActionListener(ee -> {
-            
+        // Xử lý sự kiện cho nút Thêm hóa đơn mới
+        btnAdd.addActionListener(ee -> {     
         });
         
+        // Xử lý sự kiện cho nút Sửa hóa đơn
         btnEdit.addActionListener(ee -> {
             int selectedRow = tblInvoice.getSelectedRow();
             if (selectedRow == -1) {
@@ -136,6 +137,7 @@ public class FormInvoice extends JFrame {
            
         });
         
+        // Xử lý sự kiện cho nút Xóa hóa đơn
         btnDelete.addActionListener(e -> {
             int selectedRow = tblInvoice.getSelectedRow();
             if (selectedRow == -1) {
@@ -152,10 +154,11 @@ public class FormInvoice extends JFrame {
                 JOptionPane.YES_NO_OPTION);
                 
             if (confirm == JOptionPane.YES_OPTION) {
-                
+                tableModel.removeRow(selectedRow);
             }
         });
         
+        // Xử lý sự kiện cho nút Xác nhận thanh toán
         btnConfirmPayment.addActionListener(ee -> {
             int selectedRow = tblInvoice.getSelectedRow();
             if (selectedRow == -1) {
@@ -181,27 +184,29 @@ public class FormInvoice extends JFrame {
                 JOptionPane.YES_NO_OPTION);
                 
             if (confirm == JOptionPane.YES_OPTION) {
-                
                 tableModel.setValueAt("Đã thanh toán", selectedRow, 5);
             }
         });
         
-        
+        // Xử lý sự kiện tìm kiếm khi người dùng nhập vào ô tìm kiếm
         txtSearch.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void changedUpdate(javax.swing.event.DocumentEvent e) { filterTable(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e) { filterTable(); }
             public void insertUpdate(javax.swing.event.DocumentEvent e) { filterTable(); }
         });
         
+        // Xử lý sự kiện lọc theo trạng thái
         cboStatus.addActionListener(ee -> filterTable());
     }
     
+    // Phương thức lọc dữ liệu bảng theo điều kiện tìm kiếm
     private void filterTable() {
 
         
       
     }
     
+    // Thêm dữ liệu mẫu vào bảng
     private void addSampleData() {
         Object[][] data = {
             {"INV001", "01/01/2024", "Nguyễn Văn A", "0123456789", "2,500,000 VNĐ", "Chờ xác nhận"},
@@ -215,6 +220,7 @@ public class FormInvoice extends JFrame {
         }
     }
     
+    // Tạo label với style mặc định
     private JLabel createLabel(String text) {
         JLabel label = new JLabel(text);
         label.setForeground(TEXT_COLOR);
@@ -222,6 +228,7 @@ public class FormInvoice extends JFrame {
         return label;
     }
     
+    // Tạo text field với style mặc định
     private JTextField createTextField() {
         JTextField textField = new JTextField();
         textField.setBackground(BACKGROUND_COLOR);
@@ -235,6 +242,7 @@ public class FormInvoice extends JFrame {
         return textField;
     }
     
+    // Tạo combo box với style mặc định
     private JComboBox<String> createComboBox(String[] items) {
         JComboBox<String> comboBox = new JComboBox<>(items);
         comboBox.setBackground(BACKGROUND_COLOR);

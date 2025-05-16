@@ -3,7 +3,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import com.team4.shoestore.service.ShoeService;
+import com.team4.shoestore.service.OrderService;
+import com.team4.shoestore.service.VariantService;
+import com.team4.shoestore.service.CustomerService;
 import com.team4.shoestore.model.Shoe;
+import com.team4.shoestore.model.Order;
+import com.team4.shoestore.model.OrderItem;
+import com.team4.shoestore.model.Variant;
+import com.team4.shoestore.model.Customer;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -12,6 +19,8 @@ import java.util.List;
 import java.net.URL;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.time.LocalDateTime;
+import com.team4.shoestore.model.Order.PaymentMethod;
 
 
 @Component
@@ -30,19 +39,43 @@ public class FormMenu extends JPanel {
     @Autowired
     private ShoeService shoeService;
 
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private VariantService variantService;
+
+    @Autowired
+    private CustomerService customerService;
+
     // Product class to store product information
     private class Product {
         String name;
         URL imagePath;
         String category;
         BigDecimal price;
+        Integer shoeId; // Thêm ID để lưu trữ
         
-        Product(String name, URL imagePath, String category, BigDecimal price) {
+        Product(String name, URL imagePath, String category, BigDecimal price, Integer shoeId) {
             this.name = name;
             this.imagePath = imagePath;
             this.category = category;
             this.price = price;
+            this.shoeId = shoeId;
         }
+    }
+    
+    // Thêm biến để theo dõi tổng tiền
+    private BigDecimal totalPrice = BigDecimal.ZERO;
+    
+    private void updateTotalPrice() {
+        totalPrice = BigDecimal.ZERO;
+        for (int i = 0; i < cartTableModel.getRowCount(); i++) {
+            BigDecimal price = (BigDecimal) cartTableModel.getValueAt(i, 3);
+            Integer quantity = (Integer) cartTableModel.getValueAt(i, 2);
+            totalPrice = totalPrice.add(price.multiply(new BigDecimal(quantity)));
+        }
+        totalPriceLabel.setText("Tổng tiền: " + String.format("%,.0f VNĐ", totalPrice));
     }
     
     public FormMenu() {
@@ -81,8 +114,14 @@ public class FormMenu extends JPanel {
                             continue;
                         }
                         
-                        // Create and add product
-                        Product product = new Product(shoe.getName(), imageUrl, shoe.getCategory(), shoe.getPrice());
+                        // Create and add product with ID
+                        Product product = new Product(
+                            shoe.getName(), 
+                            imageUrl, 
+                            shoe.getCategory(), 
+                            shoe.getPrice(),
+                            shoe.getShoeId()
+                        );
                         products.add(product);
                         System.out.println("Added product to list: " + product.name);
                         
@@ -193,19 +232,39 @@ public class FormMenu extends JPanel {
         System.out.println("Displaying products for category: " + category);
         productsPanel.removeAll();
         
-        int count = 0;
-        for (Product product : products) {
-            if (category.equals("Tất cả") || product.category.equals(category)) {
-                JPanel productCard = createProductCard(product.name, product.imagePath, product.price);
-                productsPanel.add(productCard);
-                count++;
-                System.out.println("Added card for product: " + product.name);
+        // Lọc sản phẩm theo category
+        List<Product> filteredProducts = new ArrayList<>();
+        if (category.equals("Tất cả")) {
+            filteredProducts.addAll(products);
+        } else {
+            for (Product product : products) {
+                if (product.category.equals(category)) {
+                    filteredProducts.add(product);
+                }
             }
         }
         
-        System.out.println("Added " + count + " product cards to panel");
+        // Hiển thị thông báo nếu không có sản phẩm
+        if (filteredProducts.isEmpty()) {
+            JLabel noProductsLabel = new JLabel("Không có sản phẩm nào trong danh mục này");
+            noProductsLabel.setFont(new Font("Arial", Font.BOLD, 16));
+            noProductsLabel.setForeground(Color.WHITE);
+            noProductsLabel.setHorizontalAlignment(JLabel.CENTER);
+            productsPanel.add(noProductsLabel);
+        } else {
+            // Hiển thị các sản phẩm đã lọc
+            for (Product product : filteredProducts) {
+                JPanel productCard = createProductCard(product.name, product.imagePath, product.price);
+                productsPanel.add(productCard);
+            }
+        }
+        
+        // Cập nhật giao diện
         productsPanel.revalidate();
         productsPanel.repaint();
+        
+        // Log số lượng sản phẩm được hiển thị
+        System.out.println("Displayed " + filteredProducts.size() + " products for category: " + category);
     }
     
     private JPanel createProductCard(String name, URL imagePath, BigDecimal price) {
@@ -262,13 +321,52 @@ public class FormMenu extends JPanel {
         addToCartButton.setFocusPainted(false);
         addToCartButton.setMaximumSize(new Dimension(150, 35));
         
-        // Add hover effect for add to cart button
+        // Add hover effect and click event for add to cart button
         addToCartButton.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
                 addToCartButton.setBackground(new Color(80, 80, 80));
             }
             public void mouseExited(MouseEvent e) {
                 addToCartButton.setBackground(new Color(60, 60, 60));
+            }
+        });
+
+        // Add to cart action
+        addToCartButton.addActionListener(e -> {
+            // Find the product in the products list
+            Product selectedProduct = products.stream()
+                .filter(p -> p.name.equals(name))
+                .findFirst()
+                .orElse(null);
+
+            if (selectedProduct != null) {
+                // Check if product already exists in cart
+                boolean found = false;
+                for (int i = 0; i < cartTableModel.getRowCount(); i++) {
+                    if (cartTableModel.getValueAt(i, 1).equals(name)) {
+                        // Increment quantity
+                        Integer currentQty = (Integer) cartTableModel.getValueAt(i, 2);
+                        cartTableModel.setValueAt(currentQty + 1, i, 2);
+                        found = true;
+                        break;
+                    }
+                }
+
+                // If product not in cart, add new row
+                if (!found) {
+                    cartTableModel.addRow(new Object[]{
+                        selectedProduct.shoeId,
+                        name,
+                        1, // Initial quantity
+                        price
+                    });
+                }
+
+                updateTotalPrice();
+                JOptionPane.showMessageDialog(this,
+                    "Đã thêm " + name + " vào giỏ hàng!",
+                    "Thành công",
+                    JOptionPane.INFORMATION_MESSAGE);
             }
         });
         
@@ -326,6 +424,35 @@ public class FormMenu extends JPanel {
         JButton clearButton = new JButton("Xóa giỏ hàng");
         JButton confirmButton = new JButton("Xác nhận");
         
+        // Clear cart action
+        clearButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?",
+                "Xác nhận xóa",
+                JOptionPane.YES_NO_OPTION);
+                
+            if (confirm == JOptionPane.YES_OPTION) {
+                cartTableModel.setRowCount(0);
+                updateTotalPrice();
+                JOptionPane.showMessageDialog(this,
+                    "Đã xóa giỏ hàng!",
+                    "Thành công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+
+        // Confirm order action
+        confirmButton.addActionListener(e -> {
+            if (cartTableModel.getRowCount() == 0) {
+                JOptionPane.showMessageDialog(this,
+                    "Giỏ hàng đang trống!",
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            showOrderDialog();
+        });
+        
         // Style buttons
         for (JButton button : new JButton[]{clearButton, confirmButton}) {
             button.setBackground(new Color(60, 60, 60));
@@ -352,13 +479,41 @@ public class FormMenu extends JPanel {
     }
     
     private void initEvent() {
-        // Add category filter event listener
+        // Xử lý sự kiện thay đổi category
         categoryComboBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String selectedCategory = (String) categoryComboBox.getSelectedItem();
                 System.out.println("Category selected: " + selectedCategory);
-                displayProducts(selectedCategory);
+                
+                // Hiển thị loading message
+                productsPanel.removeAll();
+                JLabel loadingLabel = new JLabel("Đang tải sản phẩm...");
+                loadingLabel.setFont(new Font("Arial", Font.BOLD, 16));
+                loadingLabel.setForeground(Color.WHITE);
+                loadingLabel.setHorizontalAlignment(JLabel.CENTER);
+                productsPanel.add(loadingLabel);
+                productsPanel.revalidate();
+                productsPanel.repaint();
+                
+                // Sử dụng SwingWorker để tải sản phẩm trong background
+                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() throws Exception {
+                        // Tải lại danh sách sản phẩm nếu cần
+                        if (products.isEmpty()) {
+                            LoadMenu();
+                        }
+                        return null;
+                    }
+                    
+                    @Override
+                    protected void done() {
+                        // Hiển thị sản phẩm sau khi tải xong
+                        displayProducts(selectedCategory);
+                    }
+                };
+                worker.execute();
             }
         });
         
@@ -374,5 +529,106 @@ public class FormMenu extends JPanel {
                 }
             }
         });
+    }
+
+    private void showOrderDialog() {
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Thông tin đặt hàng");
+        dialog.setModal(true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(400, 300);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel inputPanel = new JPanel(new GridLayout(0, 2, 10, 10));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Thêm các trường nhập liệu
+        JTextField phoneField = new JTextField();
+        String[] paymentMethods = {"Tiền mặt", "Thẻ"};
+        JComboBox<String> paymentMethodCombo = new JComboBox<>(paymentMethods);
+
+        inputPanel.add(new JLabel("Số điện thoại khách hàng:"));
+        inputPanel.add(phoneField);
+        inputPanel.add(new JLabel("Phương thức thanh toán:"));
+        inputPanel.add(paymentMethodCombo);
+
+        JPanel dialogButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton confirmDialogButton = new JButton("Xác nhận");
+        JButton cancelDialogButton = new JButton("Hủy");
+
+        confirmDialogButton.addActionListener(dialogEvent -> {
+            String phone = phoneField.getText().trim();
+            String selectedPayment = (String) paymentMethodCombo.getSelectedItem();
+
+            if (phone.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog,
+                    "Vui lòng nhập số điện thoại khách hàng!",
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                // Tìm khách hàng theo số điện thoại
+                List<Customer> customers = customerService.findCustomersByPhone(phone);
+                if (customers.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Không tìm thấy khách hàng với số điện thoại này!",
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                Customer customer = customers.get(0);
+
+                // Create order items list
+                List<OrderItem> orderItems = new ArrayList<>();
+                for (int i = 0; i < cartTableModel.getRowCount(); i++) {
+                    OrderItem item = new OrderItem();
+                    Integer shoeId = (Integer) cartTableModel.getValueAt(i, 0);
+                    Variant variant = variantService.getDefaultVariantForShoe(shoeId);
+                    if (variant == null) {
+                        throw new RuntimeException("Không tìm thấy biến thể cho sản phẩm " + cartTableModel.getValueAt(i, 1));
+                    }
+                    item.setVariant(variant);
+                    item.setQuantity((Integer) cartTableModel.getValueAt(i, 2));
+                    item.setPrice((BigDecimal) cartTableModel.getValueAt(i, 3));
+                    orderItems.add(item);
+                }
+
+                // Create new order
+                Order order = new Order();
+                order.setCustomer(customer);
+                order.setOrderDate(LocalDateTime.now());
+                order.setTotalAmount(totalPrice);
+                order.setPaymentMethod(selectedPayment.equals("Tiền mặt") ? PaymentMethod.cash : PaymentMethod.card);
+                order.setPaymentStatus(false); // Chưa thanh toán
+
+                // Save order and its items
+                Order savedOrder = orderService.createOrderWithItems(order, orderItems);
+
+                dialog.dispose();
+                cartTableModel.setRowCount(0);
+                updateTotalPrice();
+                JOptionPane.showMessageDialog(this,
+                    "Đặt hàng thành công! Mã hóa đơn: " + savedOrder.getOrderId(),
+                    "Thành công",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog,
+                    "Lỗi khi đặt hàng: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelDialogButton.addActionListener(dialogEvent -> dialog.dispose());
+
+        dialogButtonPanel.add(confirmDialogButton);
+        dialogButtonPanel.add(cancelDialogButton);
+
+        dialog.add(inputPanel, BorderLayout.CENTER);
+        dialog.add(dialogButtonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
     }
 }

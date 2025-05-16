@@ -304,6 +304,199 @@ public class FormBrands extends JPanel {
     
     
     private void initEvent() {
+        // Search button event
+        btnSearch.addActionListener(e -> {
+            String searchText = txtSearch.getText().trim();
+            String filterType = (String) cboFilterType.getSelectedItem();
+            
+            tableModel.setRowCount(0);
+            List<Brand> brands = brandService.getAllBrands();
+            
+            for (Brand brand : brands) {
+                if (filterType.equals("Tên thương hiệu")) {
+                    String brandName = brand.getName();
+                    if (brandName != null && brandName.toLowerCase().contains(searchText.toLowerCase())) {
+                        addBrandToTable(brand);
+                    }
+                } else if (filterType.equals("Quốc gia")) {
+                    String country = brand.getCountry();
+                    if (country != null && country.toLowerCase().contains(searchText.toLowerCase())) {
+                        addBrandToTable(brand);
+                    }
+                }
+            }
+        });
 
+        // Add button event
+        btnAdd.addActionListener(e -> {
+            JDialog dialog = new JDialog();
+            dialog.setTitle("Thêm thương hiệu mới");
+            dialog.setModal(true);
+            dialog.setLayout(new GridLayout(4, 2, 10, 10));
+            dialog.setSize(300, 200);
+            
+            JTextField txtName = new JTextField();
+            JTextField txtCountry = new JTextField();
+            
+            dialog.add(new JLabel("Tên:"));
+            dialog.add(txtName);
+            dialog.add(new JLabel("Quốc gia:"));
+            dialog.add(txtCountry);
+            
+            JButton btnSave = new JButton("Lưu");
+            btnSave.addActionListener(ev -> {
+                Brand brand = new Brand();
+                brand.setName(txtName.getText());
+                brand.setCountry(txtCountry.getText());
+                
+                brandService.saveBrand(brand);
+                LoadAllBrands();
+                dialog.dispose();
+            });
+            
+            JButton btnCancel = new JButton("Hủy");
+            btnCancel.addActionListener(ev -> dialog.dispose());
+            
+            dialog.add(btnSave);
+            dialog.add(btnCancel);
+            
+            dialog.setLocationRelativeTo(this);
+            dialog.setVisible(true);
+        });
+
+        // Edit button event  
+        btnEdit.addActionListener(e -> {
+            int selectedRow = brandTable.getSelectedRow();
+            if (selectedRow >= 0) {
+                try {
+                    // Get brand ID and fetch brand
+                    Object brandIdObj = brandTable.getValueAt(selectedRow, 0);
+                    if (brandIdObj == null) {
+                        throw new Exception("Không tìm thấy ID thương hiệu");
+                    }
+                    
+                    int brandId;
+                    if (brandIdObj instanceof Integer) {
+                        brandId = (Integer) brandIdObj;
+                    } else if (brandIdObj instanceof Long) {
+                        brandId = ((Long) brandIdObj).intValue();
+                    } else {
+                        throw new Exception("ID thương hiệu không hợp lệ");
+                    }
+                    
+                    Brand brand = brandService.getBrandById(brandId);
+                    if (brand == null) {
+                        throw new Exception("Không tìm thấy thông tin thương hiệu");
+                    }
+
+                    // Create and configure dialog
+                    JDialog dialog = new JDialog();
+                    dialog.setTitle("Sửa thương hiệu");
+                    dialog.setModal(true);
+                    dialog.setLayout(new GridLayout(4, 2, 10, 10));
+                    dialog.setSize(300, 200);
+
+                    // Create text fields with current values
+                    JTextField txtName = new JTextField(brand.getName());
+                    JTextField txtCountry = new JTextField(brand.getCountry());
+
+                    dialog.add(new JLabel("Tên:"));
+                    dialog.add(txtName);
+                    dialog.add(new JLabel("Quốc gia:"));
+                    dialog.add(txtCountry);
+
+                    // Save button
+                    JButton btnSave = new JButton("Lưu");
+                    btnSave.addActionListener(ev -> {
+                        try {
+                            String newName = txtName.getText().trim();
+                            String newCountry = txtCountry.getText().trim();
+                            
+                            if (newName.isEmpty() || newCountry.isEmpty()) {
+                                throw new Exception("Vui lòng điền đầy đủ thông tin");
+                            }
+
+                            brand.setName(newName);
+                            brand.setCountry(newCountry);
+                            
+                            brandService.saveBrand(brand);
+                            LoadAllBrands();
+                            dialog.dispose();
+                            
+                            JOptionPane.showMessageDialog(this,
+                                "Đã cập nhật thương hiệu thành công",
+                                "Thành công",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        } catch (Exception ex) {
+                            JOptionPane.showMessageDialog(this,
+                                "Lỗi khi cập nhật: " + ex.getMessage(),
+                                "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+
+                    JButton btnCancel = new JButton("Hủy");
+                    btnCancel.addActionListener(ev -> dialog.dispose());
+
+                    dialog.add(btnSave);
+                    dialog.add(btnCancel);
+
+                    dialog.setLocationRelativeTo(this);
+                    dialog.setVisible(true);
+                    
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this,
+                        "Lỗi: " + ex.getMessage(),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn thương hiệu cần sửa trong bảng",
+                    "Thông báo",
+                    JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        // Delete button event
+        btnDelete.addActionListener(e -> {
+            int selectedRow = brandTable.getSelectedRow();
+            if (selectedRow >= 0) {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                    "Bạn có chắc muốn xóa thương hiệu này?",
+                    "Xác nhận xóa",
+                    JOptionPane.YES_NO_OPTION);
+                    
+                if (confirm == JOptionPane.YES_OPTION) {
+                    try {
+                        Long brandId = (Long) brandTable.getValueAt(selectedRow, 0);
+                        brandService.deleteBrand(brandId.intValue());
+                        LoadAllBrands();
+                        JOptionPane.showMessageDialog(this,
+                            "Đã xóa thương hiệu thành công",
+                            "Thành công",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(this,
+                            "Không thể xóa thương hiệu này: " + ex.getMessage(),
+                            "Lỗi",
+                            JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn thương hiệu cần xóa",
+                    "Thông báo", 
+                    JOptionPane.WARNING_MESSAGE);
+            }
+        });
     }
-} 
+
+    private void addBrandToTable(Brand brand) {
+        tableModel.addRow(new Object[]{
+            brand.getBrandId(),
+            brand.getName(), 
+            brand.getCountry()
+        });
+    }
+}
